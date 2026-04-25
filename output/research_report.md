@@ -87,6 +87,17 @@ Microprice is used only as a fair-value signal.  Executable gross P&L is compute
 | hybrid_sparse_micro_signal_mid_exec | sparse portfolio + threshold selected on Jan-Feb  |         86.9296 |        -89.033  |       -2.10341 | train-positive, fails OOS; no-trade dominates in March                 |
 | literature_no_trade                 | transaction-cost no-trade benchmark               |          0      |          0      |        0       | best honest March result among ex-ante choices                         |
 
+## Selection Audit
+
+The `v2_best_march_diagnostic` row is not selected because it sorts the grid by March P&L after observing March.  March is the test set, so choosing that row is selection-on-test / look-ahead bias.  It remains useful as a post-mortem diagnostic, but it cannot be reported as an honest tradable strategy.
+
+| model                               | selection_protocol                                                               |   train_net_bps |   march_net_bps | bias_flag                          | final_use                                                                  |
+|:------------------------------------|:---------------------------------------------------------------------------------|----------------:|----------------:|:-----------------------------------|:---------------------------------------------------------------------------|
+| v2_best_by_train_overall            | Valid ex-ante selection: choose from grid using Jan-Feb only, then report March. |        -48.1997 |        -47.6356 | No test leakage.                   | No, active rule loses in train and March; useful as diagnostic benchmark.  |
+| v2_best_march_diagnostic            | Invalid as final strategy: choose after sorting by March net P&L.                |       -118.168  |         54.0767 | Selection-on-test/look-ahead bias. | No, because March is the test set. Keep only as post-mortem diagnostic.    |
+| hybrid_sparse_micro_signal_mid_exec | Valid ex-ante selection: sparse basket and threshold selected on Jan-Feb.        |         86.9296 |        -89.033  | No test leakage in selection.      | Yes as the final active experiment, but it fails OOS; compare to no-trade. |
+| literature_no_trade                 | Benchmark implied by transaction-cost/no-trade literature.                       |          0      |          0      | None.                              | Yes as the final decision benchmark; dominates active rules in March.      |
+
 ## Interpretation
 
 The initial holdings-weight basket result was not a tradable positive result: it lost before costs and then lost more after costs.  The v2 diagnostic improved methodology by treating microprice as signal-only and using rolling residual signals, but strict January-February selection did not find a train-positive active strategy.  The final hybrid sparse specification found a train-positive microprice signal, but midpoint-executable March P&L was negative.

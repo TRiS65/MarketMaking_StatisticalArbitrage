@@ -47,6 +47,7 @@ def markdown_report() -> Path:
     candidates = read_table("enhanced_sparse_candidates.csv").head(8)
     backtest = read_table("enhanced_backtest_summary.csv")
     comparison = read_table("model_comparison.csv")
+    audit = read_table("selection_audit.csv")
 
     active_test = backtest[(backtest["strategy"] != "literature_no_trade") & (backtest["sample"] == "test")].iloc[0]
     active_train = backtest[(backtest["strategy"] != "literature_no_trade") & (backtest["sample"] == "train")].iloc[0]
@@ -101,6 +102,12 @@ Microprice is used only as a fair-value signal.  Executable gross P&L is compute
 
 {table_md(comparison, ['model', 'selection_rule', 'train_net_bps', 'march_net_bps', 'full_net_bps', 'verdict'])}
 
+## Selection Audit
+
+The `v2_best_march_diagnostic` row is not selected because it sorts the grid by March P&L after observing March.  March is the test set, so choosing that row is selection-on-test / look-ahead bias.  It remains useful as a post-mortem diagnostic, but it cannot be reported as an honest tradable strategy.
+
+{table_md(audit, ['model', 'selection_protocol', 'train_net_bps', 'march_net_bps', 'bias_flag', 'final_use'])}
+
 ## Interpretation
 
 The initial holdings-weight basket result was not a tradable positive result: it lost before costs and then lost more after costs.  The v2 diagnostic improved methodology by treating microprice as signal-only and using rolling residual signals, but strict January-February selection did not find a train-positive active strategy.  The final hybrid sparse specification found a train-positive microprice signal, but midpoint-executable March P&L was negative.
@@ -144,6 +151,7 @@ def pdf_report() -> Path:
     candidates = read_table("enhanced_sparse_candidates.csv").head(5)
     backtest = read_table("enhanced_backtest_summary.csv")
     comparison = read_table("model_comparison.csv")
+    audit = read_table("selection_audit.csv")
 
     styles = getSampleStyleSheet()
     out = OUTPUT / "research_report.pdf"
@@ -164,6 +172,7 @@ def pdf_report() -> Path:
     add_table(story, "Sparse Candidate Ranking", candidates, ["subset", "train_adf_p", "train_half_life_minutes", "train_avg_oneway_cost_bps"], styles, 4)
     add_table(story, "Final Backtest", backtest, ["strategy", "sample", "trades", "gross_bps", "cost_bps", "net_bps"], styles, 3)
     add_table(story, "Model Comparison", comparison, ["model", "train_net_bps", "march_net_bps", "full_net_bps"], styles, 3)
+    add_table(story, "Selection Audit", audit, ["model", "train_net_bps", "march_net_bps", "bias_flag"], styles, 3)
 
     fig = FIGURES / "enhanced_sparse_cumulative_net.png"
     if fig.exists():
