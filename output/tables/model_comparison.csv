@@ -1,0 +1,6 @@
+model,selection_rule,signal,execution,train_net_bps,march_net_bps,full_net_bps,gross_bps,cost_bps,verdict
+baseline_original_best,best full-sample diagnostic only,mixed midpoint/micro basket,original script; micro variants use micro returns,,,-579.6510589476304,-150.46498739277214,429.18607155485824,invalid as tradable positive result; diagnostic failure
+v2_best_by_train_overall,max Jan-Feb net among v2 grid,signal_resid_micro_shrunk,"midpoint spread returns, explicit costs",-48.19973454519217,-47.63563092491599,-95.8353654701082,-8.815864077003727,87.01950139310445,"methodologically better signals, but no train-positive active strategy"
+v2_best_march_diagnostic,"best March net, not allowed for ex-ante selection",signal_raw_mid_shrunk,"midpoint spread returns, explicit costs",-118.16789351467456,54.07665059355374,-64.09124292112084,131.57895319671857,195.67019611783937,useful diagnostic; not an honest selected strategy
+hybrid_sparse_micro_signal_mid_exec,sparse portfolio + threshold selected on Jan-Feb,sparse microprice residual,"midpoint residual returns, explicit costs",86.92956617591311,-89.03297730972562,-2.1034111338125143,35.643094014122354,37.74650514793489,"train-positive, fails OOS; no-trade dominates in March"
+literature_no_trade,transaction-cost no-trade benchmark,none,none,0.0,0.0,0.0,0.0,0.0,best honest March result among ex-ante choices
