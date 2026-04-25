@@ -2,13 +2,15 @@
 
 Final project implementation for **Microstructure-Based Fair Value and Intraday Statistical Arbitrage in ETFs and Synthetic Constituent Baskets**.
 
-The final empirical conclusion is negative: with the available eight-name XLK proxy basket, the active ETF-basket arbitrage specifications do not deliver a robust tradable positive out-of-sample result after bid-ask costs.  Microprice improves signal construction and sparse spread diagnostics, but it does not rescue executable P&L once gross returns are computed on midpoint residuals.
+The final empirical conclusion is two-part.  With the available eight-name XLK proxy basket, the active market-neutral ETF-basket arbitrage specifications do not deliver a robust tradable positive out-of-sample result after bid-ask costs.  Microprice does become useful after changing the economic claim: use the sparse basket premium as a fair-value timing signal, but execute only XLK.
 
 ## Final Workflow
 
 ```bash
 python3 scripts/build_dataset.py
 python3 scripts/run_final_analysis.py
+python3 scripts/run_timing_extension.py
+python3 scripts/run_timing_robustness.py
 python3 scripts/make_report.py
 ```
 
@@ -23,6 +25,8 @@ python3 scripts/make_report.py
 | `data/processed/minute_trades_2026_MM.parquet` | One-minute trade bars for XLK and selected constituents |
 | `data/processed/research_panel.parquet` | Cleaned symbol-minute research panel |
 | `data/processed/enhanced_sparse_backtest.parquet` | Final sparse-signal backtest path |
+| `data/processed/timing_extension_backtest.parquet` | XLK-only timing extension backtest path |
+| `data/processed/timing_robustness_selected_backtest.parquet` | Stability-island selected timing rule path |
 
 ## Final Outputs
 
@@ -34,9 +38,14 @@ python3 scripts/make_report.py
 | `output/tables/model_comparison.csv` | Final comparison of baseline, v2 diagnostic, hybrid sparse, and no-trade benchmark |
 | `output/tables/enhanced_backtest_summary.csv` | Final train/test active sparse strategy and no-trade benchmark |
 | `output/tables/enhanced_sparse_candidates.csv` | Sparse mean-reverting candidate ranking |
+| `output/tables/timing_extension_summary.csv` | Fixed 50/25 bps XLK-only timing extension summary |
+| `output/tables/timing_robustness_decision.csv` | Train-only stability-island timing selection |
+| `output/tables/timing_robustness_grid.csv` | Timing robustness grid over signal views and thresholds |
+| `output/tables/timing_robustness_stability.csv` | Parameter-island stability diagnostics |
 | `output/tables/minute_data_diagnostics.csv` | Minute-bar diagnostics |
 | `output/tables/selected_xlk_holdings.csv` | Eight-name selected basket and normalized weights |
 | `output/figures/enhanced_sparse_cumulative_net.png` | Final cumulative net P&L figure |
+| `output/figures/timing_extension_cumulative_net.png` | XLK-only timing cumulative net P&L |
 
 ## Method Notes
 
@@ -52,4 +61,4 @@ The final analysis uses:
 - Jan-February 2026 selection and March 2026 out-of-sample evaluation;
 - a no-trade benchmark motivated by transaction-cost no-trade-region literature.
 
-The final result is best framed as a diagnostic negative finding: the incomplete eight-name basket is useful for studying ETF tracking-error structure, but it is not sufficiently representative to support a robust intraday arbitrage strategy in this sample.
+The final result is best framed as a diagnostic negative finding for market-neutral ETF-basket arbitrage, plus a separate positive timing extension.  The robustness grid explicitly avoids choosing the best March row: it selects a January-February stability island first, then reports March out of sample.

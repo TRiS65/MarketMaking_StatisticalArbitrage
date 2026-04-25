@@ -1,0 +1,2 @@
+decision,reason,selected_strategy,train_net_bps,mar_net_bps,all_net_bps,train_trades,mar_trades
+active_xlk_timing,Selected by Jan-Feb stability island first; March is OOS.,micro_shrink_0.75_cw10d_e60_x0_mh240,1025.7954185967988,120.05046019687465,1145.8458787936734,116,75

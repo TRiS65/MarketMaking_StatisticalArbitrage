@@ -6,7 +6,7 @@ This final version implements a literature-grounded diagnostic test of ETF-baske
 
 The original market-neutral ETF-basket arbitrage conclusion is negative.  The active sparse microprice-signal hedge strategy is positive in the January-February selection period, with 86.93 bps net P&L, but fails out of sample in March, with -89.03 bps net P&L.  The no-trade benchmark therefore dominates the active market-neutral rule in the honest March test.
 
-However, a second strategy class does produce a positive result: use the sparse basket microprice premium as a fair-value timing signal, but execute only XLK.  This XLK-only timing extension earns 638.35 bps net in March and 1047.88 bps net over the sample.  This is not market-neutral ETF arbitrage; it is a sparse-basket fair-value signal for intraday XLK timing.
+However, a second strategy class does produce a positive result: use the sparse basket microprice premium as a fair-value timing signal, but execute only XLK.  The fixed 50/25 bps timing extension earns 638.35 bps net in March and 1047.88 bps net over the sample.  A stricter stability-island robustness selection, chosen from January-February only, selects `micro_shrink_0.75_cw10d_e60_x0_mh240` and earns 120.05 bps net in March.  This is not market-neutral ETF arbitrage; it is a sparse-basket fair-value signal for intraday XLK timing.
 
 ## Data Construction
 
@@ -117,6 +117,27 @@ Cost sensitivity:
 |               3   |   23.6846 |  -10.294 | -139.594   | 173.572 |
 |               4   | -488.415  | -147.744 | -281.853   | -58.818 |
 
+## Timing Robustness Grid
+
+To avoid turning the March-positive 50/25 bps timing rule into a parameter story, I added a separate robustness grid over microprice shrinkage, rolling-center horizon, entry/exit bands, and max holding time.  The selection rule is deliberately conservative: first choose a stable January-February parameter island, then choose the best rule inside that island; March is evaluated only after selection.
+
+| decision          | reason                                                    | selected_strategy                    |   train_net_bps |   mar_net_bps |   all_net_bps |   train_trades |   mar_trades |
+|:------------------|:----------------------------------------------------------|:-------------------------------------|----------------:|--------------:|--------------:|---------------:|-------------:|
+| active_xlk_timing | Selected by Jan-Feb stability island first; March is OOS. | micro_shrink_0.75_cw10d_e60_x0_mh240 |          1025.8 |        120.05 |       1145.85 |            116 |           75 |
+
+Top train-selected parameter islands:
+
+| signal_view       |   center_days |   entry_bps |   valid_rules |   median_train_net_bps |   p25_train_net_bps |   median_mar_net_bps |   positive_march_rate |
+|:------------------|--------------:|------------:|--------------:|-----------------------:|--------------------:|---------------------:|----------------------:|
+| micro_shrink_0.75 |            10 |          60 |             5 |                731.365 |             604.599 |            71.2328   |              0.888889 |
+| micro_shrink_0.50 |            10 |          60 |             6 |                606.186 |             508.566 |            62.0572   |              0.777778 |
+| micro_shrink_0.25 |            10 |          60 |             6 |                574.601 |             505.285 |           120.05     |              0.777778 |
+| micro             |            10 |          30 |             1 |               1097.22  |             912.275 |            -0.912862 |              0.444444 |
+| micro             |            10 |          60 |             5 |                652.846 |             567.901 |            75.7209   |              0.888889 |
+| micro_shrink_0.50 |            10 |          30 |             1 |               1039.24  |             920.008 |            77.4385   |              0.666667 |
+| mid               |            10 |          60 |             6 |                512.196 |             442.88  |           131.379    |              0.777778 |
+| micro_shrink_0.25 |            10 |          30 |             1 |               1015.26  |             903.139 |            77.4677   |              0.666667 |
+
 ## Model Comparison
 
 | model                               | selection_rule                                    |   train_net_bps |   march_net_bps |   full_net_bps | verdict                                                                |
@@ -149,5 +170,7 @@ The most defensible conclusion is therefore two-part: **the proposed market-neut
 ```bash
 python3 scripts/build_dataset.py
 python3 scripts/run_final_analysis.py
+python3 scripts/run_timing_extension.py
+python3 scripts/run_timing_robustness.py
 python3 scripts/make_report.py
 ```
