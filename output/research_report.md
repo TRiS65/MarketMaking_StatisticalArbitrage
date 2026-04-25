@@ -2,11 +2,11 @@
 
 ## Executive Summary
 
-This final version implements a literature-grounded diagnostic test of ETF-basket intraday statistical arbitrage using WRDS TAQ quotes/trades for January-March 2026 and the supplied XLK holdings file.
+This final version implements a literature-grounded diagnostic test of ETF-basket intraday statistical arbitrage using WRDS TAQ quotes/trades for January-March 2026 and the supplied XLK holdings file.  It now reports two strategy classes side by side.
 
-The final conclusion is negative as a tradable strategy.  The active sparse microprice-signal strategy is positive in the January-February selection period, with 86.93 bps net P&L, but fails out of sample in March, with -89.03 bps net P&L.  The no-trade benchmark therefore dominates the active rule in the honest March test.
+The original market-neutral ETF-basket arbitrage conclusion is negative.  The active sparse microprice-signal hedge strategy is positive in the January-February selection period, with 86.93 bps net P&L, but fails out of sample in March, with -89.03 bps net P&L.  The no-trade benchmark therefore dominates the active market-neutral rule in the honest March test.
 
-This is not evidence that ETF arbitrage is impossible.  It is evidence that the current eight-name XLK proxy basket is too incomplete and too costly to support a robust one-minute arbitrage in this sample.
+However, a second strategy class does produce a positive result: use the sparse basket microprice premium as a fair-value timing signal, but execute only XLK.  This XLK-only timing extension earns 638.35 bps net in March and 1047.88 bps net over the sample.  This is not market-neutral ETF arbitrage; it is a sparse-basket fair-value signal for intraday XLK timing.
 
 ## Data Construction
 
@@ -77,6 +77,46 @@ Microprice is used only as a fair-value signal.  Executable gross P&L is compute
 | literature_no_trade  | test     |        0 |          0         |      0      |    0       |    0      |           nan       |             0      |
 | literature_no_trade  | train    |        0 |          0         |      0      |    0       |    0      |           nan       |             0      |
 
+## Positive Timing Extension
+
+The positive extension follows a different economic claim.  The basket is no longer traded as a hedge.  Instead, the sparse basket supplies a microprice fair-value premium signal for trading XLK only:
+
+- signal basket: `MSFT NVDA ORCL CRM AMD`;
+- signal: microprice premium minus five-day rolling premium mean;
+- traded instrument: XLK only;
+- entry: premium above/below 50 bps;
+- exit: premium reverts inside 25 bps;
+- max hold: intraday.
+
+| period   |   gross_bps |   cost_bps |   net_bps |   trades |   avg_abs_position |   long_gross_bps |   short_gross_bps |   xlk_buyhold_bps |
+|:---------|------------:|-----------:|----------:|---------:|-------------------:|-----------------:|------------------:|------------------:|
+| jan      |     287.185 |    142.26  |   144.925 |       44 |           0.687983 |         -127.266 |           414.451 |          -345.091 |
+| feb      |     402.055 |    137.45  |   264.605 |       50 |           0.73375  |          139.978 |           262.076 |          -204.096 |
+| mar      |     870.743 |    232.39  |   638.353 |       58 |           0.757126 |          550.871 |           319.872 |          -370.728 |
+| all      |    1559.98  |    512.099 |  1047.88  |      152 |           0.727119 |          563.583 |           996.4   |          -919.915 |
+
+Controls show that the result is not explained by simple long exposure or by flipping the signal:
+
+| control                     |   train_net_bps |   mar_net_bps |   avg_pos_mar |
+|:----------------------------|----------------:|--------------:|--------------:|
+| selected                    |         409.531 |     638.353   |      0.28881  |
+| sign_flip                   |        -968.949 |   -1103.13    |     -0.28881  |
+| active_always_long          |        -943.525 |      -1.39127 |      0.757126 |
+| active_always_short         |         384.107 |    -463.389   |     -0.757126 |
+| circular_shift_mean         |         nan     |    -440.23    |    nan        |
+| circular_shift_p95          |         nan     |     447.052   |    nan        |
+| selected_vs_circular_pvalue |         nan     |       0.0175  |    nan        |
+
+Cost sensitivity:
+
+|   cost_multiplier |       all |      feb |        jan |     mar |
+|------------------:|----------:|---------:|-----------:|--------:|
+|               1   | 1047.88   |  264.605 |  144.925   | 638.353 |
+|               1.5 |  791.834  |  195.88  |   73.7957  | 522.158 |
+|               2   |  535.784  |  127.156 |    2.66595 | 405.962 |
+|               3   |   23.6846 |  -10.294 | -139.594   | 173.572 |
+|               4   | -488.415  | -147.744 | -281.853   | -58.818 |
+
 ## Model Comparison
 
 | model                               | selection_rule                                    |   train_net_bps |   march_net_bps |   full_net_bps | verdict                                                                |
@@ -102,7 +142,7 @@ The `v2_best_march_diagnostic` row is not selected because it sorts the grid by 
 
 The initial holdings-weight basket result was not a tradable positive result: it lost before costs and then lost more after costs.  The v2 diagnostic improved methodology by treating microprice as signal-only and using rolling residual signals, but strict January-February selection did not find a train-positive active strategy.  The final hybrid sparse specification found a train-positive microprice signal, but midpoint-executable March P&L was negative.
 
-The most defensible conclusion is therefore: **the proposed ETF-basket arbitrage fails under this incomplete-basket implementation; microprice improves diagnostics but does not rescue tradable out-of-sample performance; no-trade is the best honest March decision.**
+The most defensible conclusion is therefore two-part: **the proposed market-neutral ETF-basket arbitrage fails under this incomplete-basket implementation, but the same sparse-basket microprice premium can be repurposed into a profitable XLK-only timing signal in this sample.**
 
 ## Reproducibility
 

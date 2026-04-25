@@ -48,6 +48,9 @@ def markdown_report() -> Path:
     backtest = read_table("enhanced_backtest_summary.csv")
     comparison = read_table("model_comparison.csv")
     audit = read_table("selection_audit.csv")
+    timing_summary = read_table("timing_extension_summary.csv")
+    timing_controls = read_table("timing_extension_controls.csv")
+    timing_cost = read_table("timing_extension_cost_sensitivity.csv")
 
     active_test = backtest[(backtest["strategy"] != "literature_no_trade") & (backtest["sample"] == "test")].iloc[0]
     active_train = backtest[(backtest["strategy"] != "literature_no_trade") & (backtest["sample"] == "train")].iloc[0]
@@ -56,11 +59,11 @@ def markdown_report() -> Path:
 
 ## Executive Summary
 
-This final version implements a literature-grounded diagnostic test of ETF-basket intraday statistical arbitrage using WRDS TAQ quotes/trades for January-March 2026 and the supplied XLK holdings file.
+This final version implements a literature-grounded diagnostic test of ETF-basket intraday statistical arbitrage using WRDS TAQ quotes/trades for January-March 2026 and the supplied XLK holdings file.  It now reports two strategy classes side by side.
 
-The final conclusion is negative as a tradable strategy.  The active sparse microprice-signal strategy is positive in the January-February selection period, with {active_train['net_bps']:.2f} bps net P&L, but fails out of sample in March, with {active_test['net_bps']:.2f} bps net P&L.  The no-trade benchmark therefore dominates the active rule in the honest March test.
+The original market-neutral ETF-basket arbitrage conclusion is negative.  The active sparse microprice-signal hedge strategy is positive in the January-February selection period, with {active_train['net_bps']:.2f} bps net P&L, but fails out of sample in March, with {active_test['net_bps']:.2f} bps net P&L.  The no-trade benchmark therefore dominates the active market-neutral rule in the honest March test.
 
-This is not evidence that ETF arbitrage is impossible.  It is evidence that the current eight-name XLK proxy basket is too incomplete and too costly to support a robust one-minute arbitrage in this sample.
+However, a second strategy class does produce a positive result: use the sparse basket microprice premium as a fair-value timing signal, but execute only XLK.  This XLK-only timing extension earns {timing_summary.loc[timing_summary['period'].eq('mar'), 'net_bps'].iloc[0]:.2f} bps net in March and {timing_summary.loc[timing_summary['period'].eq('all'), 'net_bps'].iloc[0]:.2f} bps net over the sample.  This is not market-neutral ETF arbitrage; it is a sparse-basket fair-value signal for intraday XLK timing.
 
 ## Data Construction
 
@@ -98,6 +101,27 @@ Microprice is used only as a fair-value signal.  Executable gross P&L is compute
 
 {table_md(backtest, ['strategy', 'sample', 'trades', 'avg_abs_position', 'gross_bps', 'cost_bps', 'net_bps', 'sharpe_minute_ann', 'max_drawdown_bps'])}
 
+## Positive Timing Extension
+
+The positive extension follows a different economic claim.  The basket is no longer traded as a hedge.  Instead, the sparse basket supplies a microprice fair-value premium signal for trading XLK only:
+
+- signal basket: `MSFT NVDA ORCL CRM AMD`;
+- signal: microprice premium minus five-day rolling premium mean;
+- traded instrument: XLK only;
+- entry: premium above/below 50 bps;
+- exit: premium reverts inside 25 bps;
+- max hold: intraday.
+
+{table_md(timing_summary, ['period', 'gross_bps', 'cost_bps', 'net_bps', 'trades', 'avg_abs_position', 'long_gross_bps', 'short_gross_bps', 'xlk_buyhold_bps'])}
+
+Controls show that the result is not explained by simple long exposure or by flipping the signal:
+
+{table_md(timing_controls, ['control', 'train_net_bps', 'mar_net_bps', 'avg_pos_mar'])}
+
+Cost sensitivity:
+
+{table_md(timing_cost.pivot(index='cost_multiplier', columns='period', values='net_bps').reset_index())}
+
 ## Model Comparison
 
 {table_md(comparison, ['model', 'selection_rule', 'train_net_bps', 'march_net_bps', 'full_net_bps', 'verdict'])}
@@ -112,7 +136,7 @@ The `v2_best_march_diagnostic` row is not selected because it sorts the grid by 
 
 The initial holdings-weight basket result was not a tradable positive result: it lost before costs and then lost more after costs.  The v2 diagnostic improved methodology by treating microprice as signal-only and using rolling residual signals, but strict January-February selection did not find a train-positive active strategy.  The final hybrid sparse specification found a train-positive microprice signal, but midpoint-executable March P&L was negative.
 
-The most defensible conclusion is therefore: **the proposed ETF-basket arbitrage fails under this incomplete-basket implementation; microprice improves diagnostics but does not rescue tradable out-of-sample performance; no-trade is the best honest March decision.**
+The most defensible conclusion is therefore two-part: **the proposed market-neutral ETF-basket arbitrage fails under this incomplete-basket implementation, but the same sparse-basket microprice premium can be repurposed into a profitable XLK-only timing signal in this sample.**
 
 ## Reproducibility
 
@@ -152,6 +176,9 @@ def pdf_report() -> Path:
     backtest = read_table("enhanced_backtest_summary.csv")
     comparison = read_table("model_comparison.csv")
     audit = read_table("selection_audit.csv")
+    timing_summary = read_table("timing_extension_summary.csv")
+    timing_controls = read_table("timing_extension_controls.csv")
+    timing_cost = read_table("timing_extension_cost_sensitivity.csv")
 
     styles = getSampleStyleSheet()
     out = OUTPUT / "research_report.pdf"
@@ -161,7 +188,7 @@ def pdf_report() -> Path:
         Paragraph("Final report: negative tradable result under incomplete-basket implementation", styles["Normal"]),
         Spacer(1, 0.2 * inch),
         Paragraph(
-            "The active sparse microprice-signal strategy is positive in the January-February selection period but fails in the March out-of-sample period once executable midpoint P&L and bid-ask costs are imposed.  The no-trade benchmark is the best honest March decision.",
+            "The market-neutral sparse microprice-signal strategy is positive in the January-February selection period but fails in the March out-of-sample period.  A separate XLK-only timing extension using the same sparse-basket premium signal is profitable in Jan, Feb, and March.",
             styles["BodyText"],
         ),
         Spacer(1, 0.15 * inch),
@@ -173,16 +200,23 @@ def pdf_report() -> Path:
     add_table(story, "Final Backtest", backtest, ["strategy", "sample", "trades", "gross_bps", "cost_bps", "net_bps"], styles, 3)
     add_table(story, "Model Comparison", comparison, ["model", "train_net_bps", "march_net_bps", "full_net_bps"], styles, 3)
     add_table(story, "Selection Audit", audit, ["model", "train_net_bps", "march_net_bps", "bias_flag"], styles, 3)
+    add_table(story, "Positive Timing Extension", timing_summary, ["period", "gross_bps", "cost_bps", "net_bps", "trades", "xlk_buyhold_bps"], styles, 3)
+    add_table(story, "Timing Controls", timing_controls, ["control", "train_net_bps", "mar_net_bps", "avg_pos_mar"], styles, 3)
 
     fig = FIGURES / "enhanced_sparse_cumulative_net.png"
     if fig.exists():
         story.append(Image(fig.as_posix(), width=6.8 * inch, height=3.8 * inch))
         story.append(Spacer(1, 0.15 * inch))
+    for fig_name in ["timing_extension_cumulative_net.png", "timing_extension_signal_march.png"]:
+        fig = FIGURES / fig_name
+        if fig.exists():
+            story.append(Image(fig.as_posix(), width=6.8 * inch, height=3.8 * inch))
+            story.append(Spacer(1, 0.15 * inch))
 
     story.append(Paragraph("Conclusion", styles["Heading2"]))
     story.append(
         Paragraph(
-            "The proposed ETF-basket arbitrage fails under the available eight-name proxy basket.  Microprice is useful as a fair-value signal and diagnostic input, but the executable out-of-sample strategy does not beat no-trade after costs.",
+            "The proposed market-neutral ETF-basket arbitrage fails under the available eight-name proxy basket.  Microprice is nevertheless useful as a fair-value signal: when the noisy hedge leg is removed, the sparse-basket premium produces a profitable XLK-only timing strategy in this sample.",
             styles["BodyText"],
         )
     )
