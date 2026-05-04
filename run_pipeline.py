@@ -8,7 +8,8 @@ Execution order:
     3. run_experiment_suite.py   -- full walk-forward grid search
     4. run_timing_extension.py   -- XLK-only timing strategy (fixed 50/25 bps)
     5. run_timing_robustness.py  -- robustness grid over timing parameters
-    6. make_report.py            -- assemble markdown + PDF report
+    6. run_old_data_method_upgrade.py -- pair trading, z heatmaps, cost audit
+    7. make_report.py            -- assemble markdown + PDF report
 
 Usage:
     # Run the full pipeline
@@ -113,16 +114,17 @@ PIPELINE: list[tuple[int, str, list[str], str]] = [
     ),
     (
         6,
-        "make_report.py",
+        "run_old_data_method_upgrade.py",
         [],
-        "Assemble all CSV tables and figures into the final markdown and PDF report.",
+        "Old-data method upgrade: pair trading, validation/test z-score "
+        "heatmaps, max-holding exits, bid/ask-aware execution diagnostics, "
+        "trade logs, and selection audit.",
     ),
     (
         7,
-        "run_threshold_heatmap.py",
+        "make_report.py",
         [],
-        "Entry/exit threshold heatmap grid for XLK timing strategy "
-        "(3 heatmaps: Jan, Feb, Mar net bps).",
+        "Assemble all CSV tables and figures into the final markdown and PDF report.",
     ),
 ]
 

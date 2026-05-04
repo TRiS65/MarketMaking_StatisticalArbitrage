@@ -1,0 +1,3 @@
+strategy_name,selected_using,tested_on,is_test_selected,valid_for_final_claim,notes
+pair_zscore_validation_selected,February 2026 validation net_bps with at least two validation trades when available,March 2026 test,False,True,Jan 2026 estimates beta/diagnostics; Feb selects entry/exit/max-holding; Mar is held out.
+pair_zscore_test_leaderboard_sort,March 2026 test net_bps,March 2026 test,True,False,Diagnostic ranking only; do not present as an ex ante selected final claim.
