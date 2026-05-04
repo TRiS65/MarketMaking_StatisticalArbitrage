@@ -4,9 +4,9 @@
 
 This final version implements a literature-grounded diagnostic test of ETF-basket intraday statistical arbitrage using WRDS TAQ quotes/trades for January-March 2026 and the supplied XLK holdings file.  It now reports two strategy classes side by side.
 
-The original market-neutral ETF-basket arbitrage conclusion is negative.  The active sparse microprice-signal hedge strategy is positive in the January-February selection period, with 86.93 bps net P&L, but fails out of sample in March, with -89.03 bps net P&L.  The no-trade benchmark therefore dominates the active market-neutral rule in the honest March test.
+The original market-neutral ETF-basket arbitrage conclusion is negative.  The active sparse microprice-signal hedge strategy is not robust to the exact top-of-book bid/ask boundary-cost audit: it has -40.74 bps net P&L in January-February and -115.24 bps net P&L in March.  The no-trade benchmark therefore dominates the active market-neutral rule in the honest March test.
 
-However, a second strategy class does produce a positive result: use the sparse basket microprice premium as a fair-value timing signal, but execute only XLK.  The fixed 50/25 bps timing extension earns 638.35 bps net in March and 1047.88 bps net over the sample.  A stricter stability-island robustness selection, chosen from January-February only, selects `micro_shrink_0.75_cw10d_e60_x0_mh240` and earns 120.05 bps net in March.  This is not market-neutral ETF arbitrage; it is a sparse-basket fair-value signal for intraday XLK timing.
+However, a second strategy class does produce a positive result: use the sparse basket microprice premium as a fair-value timing signal, but execute only XLK.  The fixed 50/25 bps timing extension earns 638.42 bps net in March under the same bid/ask boundary-cost audit.  A stricter stability-island robustness selection, chosen from January-February only, selects `micro_shrink_0.75_cw10d_e60_x0_mh240` and earns 120.05 bps net in March.  This is not market-neutral ETF arbitrage; it is a sparse-basket fair-value signal for intraday XLK timing.
 
 ## Data Construction
 
@@ -77,6 +77,28 @@ Microprice is used only as a fair-value signal.  Executable gross P&L is compute
 | literature_no_trade  | test     |        0 |          0         |      0      |    0       |    0      |           nan       |             0      |
 | literature_no_trade  | train    |        0 |          0         |      0      |    0       |    0      |           nan       |             0      |
 
+## Bid/Ask Execution Accounting Audit
+
+The execution audit keeps each strategy's selected position path fixed, computes midpoint gross P&L over the same holding window, and subtracts explicit bid/ask boundary costs at position changes.  This is a minute-level top-of-book audit, not a depth-, queue-, latency-, borrow-, or market-impact-aware simulator.
+
+| sample   |   old_gross_bps |   old_cost_bps |   old_net_bps |   new_gross_bps |   new_bidask_cost_bps |   new_bidask_net_bps |   turnover |
+|:---------|----------------:|---------------:|--------------:|----------------:|----------------------:|---------------------:|-----------:|
+| test     |        -82.0832 |        6.94978 |      -89.033  |        -82.0832 |               33.1588 |            -115.242  |          2 |
+| train    |        117.726  |       30.7967  |       86.9296 |        117.726  |              158.464  |             -40.7373 |          6 |
+
+The old pair-trading diagnostic is also re-audited under the same accounting.  The XLK-ORCL March result is not a robust positive alpha after costs: midpoint gross P&L is positive, but bid/ask boundary costs exceed it.
+
+| pair     |   validation_net_bps |   test_gross_bps |   test_cost_bps |   test_net_bps |   test_trades |
+|:---------|---------------------:|-----------------:|----------------:|---------------:|--------------:|
+| XLK-ORCL |              264.184 |          509.66  |         734.756 |       -225.095 |            17 |
+| XLK-MSFT |              234.674 |          415.199 |         648.192 |       -232.994 |            17 |
+| XLK-AAPL |              279.655 |          358.664 |         667.117 |       -308.453 |            14 |
+| XLK-CRM  |              235.937 |          318.011 |         633.141 |       -315.13  |            14 |
+| XLK-AVGO |              104.117 |          753.636 |        1153.16  |       -399.52  |            19 |
+| XLK-NVDA |              337.879 |         1303.73  |        1787.47  |       -483.733 |            32 |
+| XLK-AMD  |              266.841 |          908.588 |        1453.11  |       -544.524 |            31 |
+| XLK-CSCO |              220.434 |          844.951 |        1485.58  |       -640.634 |            38 |
+
 ## Positive Timing Extension
 
 The positive extension follows a different economic claim.  The basket is no longer traded as a hedge.  Instead, the sparse basket supplies a microprice fair-value premium signal for trading XLK only:
@@ -94,6 +116,14 @@ The positive extension follows a different economic claim.  The basket is no lon
 | feb      |     402.055 |    137.45  |   264.605 |       50 |           0.73375  |          139.978 |           262.076 |          -204.096 |
 | mar      |     870.743 |    232.39  |   638.353 |       58 |           0.757126 |          550.871 |           319.872 |          -370.728 |
 | all      |    1559.98  |    512.099 |  1047.88  |      152 |           0.727119 |          563.583 |           996.4   |          -919.915 |
+
+Bid/ask boundary-cost audit for the same XLK timing path:
+
+| sample   |   old_gross_bps |   old_cost_bps |   old_net_bps |   new_gross_bps |   new_bidask_cost_bps |   new_bidask_net_bps |   turnover |
+|:---------|----------------:|---------------:|--------------:|----------------:|----------------------:|---------------------:|-----------:|
+| feb      |         402.055 |         137.45 |       264.605 |         402.055 |               137.453 |              264.601 |         50 |
+| jan      |         287.185 |         142.26 |       144.925 |         287.185 |               142.293 |              144.892 |         44 |
+| mar      |         870.743 |         232.39 |       638.353 |         870.743 |               232.321 |              638.422 |         58 |
 
 Controls show that the result is not explained by simple long exposure or by flipping the signal:
 
@@ -161,7 +191,7 @@ The `v2_best_march_diagnostic` row is not selected because it sorts the grid by 
 
 ## Interpretation
 
-The initial holdings-weight basket result was not a tradable positive result: it lost before costs and then lost more after costs.  The v2 diagnostic improved methodology by treating microprice as signal-only and using rolling residual signals, but strict January-February selection did not find a train-positive active strategy.  The final hybrid sparse specification found a train-positive microprice signal, but midpoint-executable March P&L was negative.
+The initial holdings-weight basket result was not a tradable positive result: it lost before costs and then lost more after costs.  The v2 diagnostic improved methodology by treating microprice as signal-only and using rolling residual signals, but strict January-February selection did not find a train-positive active strategy.  The final hybrid sparse specification looked mildly positive under the old half-spread approximation, but the exact bid/ask boundary-cost audit turns it negative in both train and March test.
 
 The most defensible conclusion is therefore two-part: **the proposed market-neutral ETF-basket arbitrage fails under this incomplete-basket implementation, but the same sparse-basket microprice premium can be repurposed into a profitable XLK-only timing signal in this sample.**
 
@@ -170,7 +200,11 @@ The most defensible conclusion is therefore two-part: **the proposed market-neut
 ```bash
 python3 scripts/build_dataset.py
 python3 scripts/run_final_analysis.py
+python3 scripts/run_sparse_bidask_execution.py
 python3 scripts/run_timing_extension.py
+python3 scripts/run_timing_bidask_execution.py
 python3 scripts/run_timing_robustness.py
+python3 scripts/run_old_data_method_upgrade.py
+python3 scripts/run_old_data_execution_audit_fixed.py
 python3 scripts/make_report.py
 ```

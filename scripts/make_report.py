@@ -23,6 +23,11 @@ def read_table(name: str) -> pd.DataFrame:
     return pd.read_csv(TABLES / name)
 
 
+def read_optional_table(name: str) -> pd.DataFrame | None:
+    path = TABLES / name
+    return pd.read_csv(path) if path.exists() else None
+
+
 def table_md(df: pd.DataFrame, cols: list[str] | None = None) -> str:
     view = df if cols is None else df[cols]
     return view.to_markdown(index=False)
@@ -53,9 +58,22 @@ def markdown_report() -> Path:
     timing_cost = read_table("timing_extension_cost_sensitivity.csv")
     timing_robust_decision = read_table("timing_robustness_decision.csv")
     timing_robust_stability = read_table("timing_robustness_stability.csv").head(8)
+    sparse_bidask = read_optional_table("enhanced_sparse_bidask_comparison.csv")
+    timing_bidask = read_optional_table("timing_extension_bidask_comparison.csv")
+    pair_execution = read_optional_table("old_pair_validation_selected_execution_fixed.csv")
 
     active_test = backtest[(backtest["strategy"] != "literature_no_trade") & (backtest["sample"] == "test")].iloc[0]
     active_train = backtest[(backtest["strategy"] != "literature_no_trade") & (backtest["sample"] == "train")].iloc[0]
+    if sparse_bidask is not None:
+        sparse_train_net = sparse_bidask.loc[sparse_bidask["sample"].eq("train"), "new_bidask_net_bps"].iloc[0]
+        sparse_test_net = sparse_bidask.loc[sparse_bidask["sample"].eq("test"), "new_bidask_net_bps"].iloc[0]
+    else:
+        sparse_train_net = active_train["net_bps"]
+        sparse_test_net = active_test["net_bps"]
+    if timing_bidask is not None:
+        timing_mar_net = timing_bidask.loc[timing_bidask["sample"].eq("mar"), "new_bidask_net_bps"].iloc[0]
+    else:
+        timing_mar_net = timing_summary.loc[timing_summary["period"].eq("mar"), "net_bps"].iloc[0]
 
     text = f"""# Microstructure-Based Fair Value and Intraday Statistical Arbitrage in XLK
 
@@ -63,9 +81,9 @@ def markdown_report() -> Path:
 
 This final version implements a literature-grounded diagnostic test of ETF-basket intraday statistical arbitrage using WRDS TAQ quotes/trades for January-March 2026 and the supplied XLK holdings file.  It now reports two strategy classes side by side.
 
-The original market-neutral ETF-basket arbitrage conclusion is negative.  The active sparse microprice-signal hedge strategy is positive in the January-February selection period, with {active_train['net_bps']:.2f} bps net P&L, but fails out of sample in March, with {active_test['net_bps']:.2f} bps net P&L.  The no-trade benchmark therefore dominates the active market-neutral rule in the honest March test.
+The original market-neutral ETF-basket arbitrage conclusion is negative.  The active sparse microprice-signal hedge strategy is not robust to the exact top-of-book bid/ask boundary-cost audit: it has {sparse_train_net:.2f} bps net P&L in January-February and {sparse_test_net:.2f} bps net P&L in March.  The no-trade benchmark therefore dominates the active market-neutral rule in the honest March test.
 
-However, a second strategy class does produce a positive result: use the sparse basket microprice premium as a fair-value timing signal, but execute only XLK.  The fixed 50/25 bps timing extension earns {timing_summary.loc[timing_summary['period'].eq('mar'), 'net_bps'].iloc[0]:.2f} bps net in March and {timing_summary.loc[timing_summary['period'].eq('all'), 'net_bps'].iloc[0]:.2f} bps net over the sample.  A stricter stability-island robustness selection, chosen from January-February only, selects `{timing_robust_decision['selected_strategy'].iloc[0]}` and earns {timing_robust_decision['mar_net_bps'].iloc[0]:.2f} bps net in March.  This is not market-neutral ETF arbitrage; it is a sparse-basket fair-value signal for intraday XLK timing.
+However, a second strategy class does produce a positive result: use the sparse basket microprice premium as a fair-value timing signal, but execute only XLK.  The fixed 50/25 bps timing extension earns {timing_mar_net:.2f} bps net in March under the same bid/ask boundary-cost audit.  A stricter stability-island robustness selection, chosen from January-February only, selects `{timing_robust_decision['selected_strategy'].iloc[0]}` and earns {timing_robust_decision['mar_net_bps'].iloc[0]:.2f} bps net in March.  This is not market-neutral ETF arbitrage; it is a sparse-basket fair-value signal for intraday XLK timing.
 
 ## Data Construction
 
@@ -103,6 +121,16 @@ Microprice is used only as a fair-value signal.  Executable gross P&L is compute
 
 {table_md(backtest, ['strategy', 'sample', 'trades', 'avg_abs_position', 'gross_bps', 'cost_bps', 'net_bps', 'sharpe_minute_ann', 'max_drawdown_bps'])}
 
+## Bid/Ask Execution Accounting Audit
+
+The execution audit keeps each strategy's selected position path fixed, computes midpoint gross P&L over the same holding window, and subtracts explicit bid/ask boundary costs at position changes.  This is a minute-level top-of-book audit, not a depth-, queue-, latency-, borrow-, or market-impact-aware simulator.
+
+{table_md(sparse_bidask) if sparse_bidask is not None else 'Sparse bid/ask audit not available.'}
+
+The old pair-trading diagnostic is also re-audited under the same accounting.  The XLK-ORCL March result is not a robust positive alpha after costs: midpoint gross P&L is positive, but bid/ask boundary costs exceed it.
+
+{table_md(pair_execution, ['pair', 'validation_net_bps', 'test_gross_bps', 'test_cost_bps', 'test_net_bps', 'test_trades']) if pair_execution is not None else 'Pair execution audit not available.'}
+
 ## Positive Timing Extension
 
 The positive extension follows a different economic claim.  The basket is no longer traded as a hedge.  Instead, the sparse basket supplies a microprice fair-value premium signal for trading XLK only:
@@ -115,6 +143,10 @@ The positive extension follows a different economic claim.  The basket is no lon
 - max hold: intraday.
 
 {table_md(timing_summary, ['period', 'gross_bps', 'cost_bps', 'net_bps', 'trades', 'avg_abs_position', 'long_gross_bps', 'short_gross_bps', 'xlk_buyhold_bps'])}
+
+Bid/ask boundary-cost audit for the same XLK timing path:
+
+{table_md(timing_bidask) if timing_bidask is not None else 'Timing bid/ask audit not available.'}
 
 Controls show that the result is not explained by simple long exposure or by flipping the signal:
 
@@ -146,7 +178,7 @@ The `v2_best_march_diagnostic` row is not selected because it sorts the grid by 
 
 ## Interpretation
 
-The initial holdings-weight basket result was not a tradable positive result: it lost before costs and then lost more after costs.  The v2 diagnostic improved methodology by treating microprice as signal-only and using rolling residual signals, but strict January-February selection did not find a train-positive active strategy.  The final hybrid sparse specification found a train-positive microprice signal, but midpoint-executable March P&L was negative.
+The initial holdings-weight basket result was not a tradable positive result: it lost before costs and then lost more after costs.  The v2 diagnostic improved methodology by treating microprice as signal-only and using rolling residual signals, but strict January-February selection did not find a train-positive active strategy.  The final hybrid sparse specification looked mildly positive under the old half-spread approximation, but the exact bid/ask boundary-cost audit turns it negative in both train and March test.
 
 The most defensible conclusion is therefore two-part: **the proposed market-neutral ETF-basket arbitrage fails under this incomplete-basket implementation, but the same sparse-basket microprice premium can be repurposed into a profitable XLK-only timing signal in this sample.**
 
@@ -155,8 +187,12 @@ The most defensible conclusion is therefore two-part: **the proposed market-neut
 ```bash
 python3 scripts/build_dataset.py
 python3 scripts/run_final_analysis.py
+python3 scripts/run_sparse_bidask_execution.py
 python3 scripts/run_timing_extension.py
+python3 scripts/run_timing_bidask_execution.py
 python3 scripts/run_timing_robustness.py
+python3 scripts/run_old_data_method_upgrade.py
+python3 scripts/run_old_data_execution_audit_fixed.py
 python3 scripts/make_report.py
 ```
 """
@@ -195,6 +231,9 @@ def pdf_report() -> Path:
     timing_cost = read_table("timing_extension_cost_sensitivity.csv")
     timing_robust_decision = read_table("timing_robustness_decision.csv")
     timing_robust_stability = read_table("timing_robustness_stability.csv").head(5)
+    sparse_bidask = read_optional_table("enhanced_sparse_bidask_comparison.csv")
+    timing_bidask = read_optional_table("timing_extension_bidask_comparison.csv")
+    pair_execution = read_optional_table("old_pair_validation_selected_execution_fixed.csv")
 
     styles = getSampleStyleSheet()
     out = OUTPUT / "research_report.pdf"
@@ -204,7 +243,7 @@ def pdf_report() -> Path:
         Paragraph("Final report: negative tradable result under incomplete-basket implementation", styles["Normal"]),
         Spacer(1, 0.2 * inch),
         Paragraph(
-            "The market-neutral sparse microprice-signal strategy is positive in the January-February selection period but fails in the March out-of-sample period.  A separate XLK-only timing extension using the same sparse-basket premium signal is profitable in Jan, Feb, and March; a stricter stability-island timing rule also remains positive in March.",
+            "The market-neutral sparse microprice-signal strategy fails after an exact top-of-book bid/ask boundary-cost audit.  The old XLK-ORCL pair-trading diagnostic is also not robust after consistent execution accounting.  A separate XLK-only timing extension using the same sparse-basket premium signal remains profitable in Jan, Feb, and March under the bid/ask boundary-cost audit; a stricter stability-island timing rule also remains positive in March.",
             styles["BodyText"],
         ),
         Spacer(1, 0.15 * inch),
@@ -214,9 +253,15 @@ def pdf_report() -> Path:
     add_table(story, "Minute Data Diagnostics", diagnostics, ["symbol", "minutes", "median_spread_bps", "trade_count"], styles, 2)
     add_table(story, "Sparse Candidate Ranking", candidates, ["subset", "train_adf_p", "train_half_life_minutes", "train_avg_oneway_cost_bps"], styles, 4)
     add_table(story, "Final Backtest", backtest, ["strategy", "sample", "trades", "gross_bps", "cost_bps", "net_bps"], styles, 3)
+    if sparse_bidask is not None:
+        add_table(story, "Sparse Bid/Ask Execution Audit", sparse_bidask, ["sample", "old_net_bps", "new_bidask_cost_bps", "new_bidask_net_bps", "turnover"], styles, 3)
+    if pair_execution is not None:
+        add_table(story, "Pair Execution Audit", pair_execution, ["pair", "validation_net_bps", "test_gross_bps", "test_cost_bps", "test_net_bps"], styles, 3)
     add_table(story, "Model Comparison", comparison, ["model", "train_net_bps", "march_net_bps", "full_net_bps"], styles, 3)
     add_table(story, "Selection Audit", audit, ["model", "train_net_bps", "march_net_bps", "bias_flag"], styles, 3)
     add_table(story, "Positive Timing Extension", timing_summary, ["period", "gross_bps", "cost_bps", "net_bps", "trades", "xlk_buyhold_bps"], styles, 3)
+    if timing_bidask is not None:
+        add_table(story, "Timing Bid/Ask Execution Audit", timing_bidask, ["sample", "old_net_bps", "new_bidask_cost_bps", "new_bidask_net_bps", "turnover"], styles, 3)
     add_table(story, "Timing Controls", timing_controls, ["control", "train_net_bps", "mar_net_bps", "avg_pos_mar"], styles, 3)
     add_table(story, "Timing Robustness Decision", timing_robust_decision, ["decision", "selected_strategy", "train_net_bps", "mar_net_bps", "all_net_bps"], styles, 3)
     add_table(story, "Timing Stability Islands", timing_robust_stability, ["signal_view", "center_days", "entry_bps", "valid_rules", "median_train_net_bps", "median_mar_net_bps"], styles, 3)

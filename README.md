@@ -8,11 +8,11 @@ The project started as a market-neutral ETF-versus-basket arbitrage study and wa
 
 ## Main Conclusion
 
-The original eight-name XLK universe does not yet support a broad production-ready market-neutral high-frequency arbitrage claim. Lower z-score thresholds create more trades, and February validation can select positive-looking pair rules, but most March out-of-sample pair results remain negative after execution costs. One explicit bid/ask-fill pair, XLK-ORCL, is strongly positive and should be treated as an execution diagnostic that needs quote-depth, size, latency, and robustness checks before being presented as tradable alpha.
+The original eight-name XLK universe does not yet support a broad production-ready market-neutral high-frequency arbitrage claim. Lower z-score thresholds create more trades, and February validation can select positive-looking pair rules, but March out-of-sample pair results are negative after consistent execution accounting. A prior XLK-ORCL explicit-fill diagnostic looked strongly positive, but the re-audit shows it was an execution-accounting mismatch: March midpoint gross P&L is `+509.66` bps, bid/ask boundary cost is `734.76` bps, and net P&L is `-225.10` bps.
 
-That mixed result is useful: it shows that the weakness is not just an overly conservative entry threshold, and it also shows how sensitive the conclusion is to the fill model. The combination of a small proxy universe, noisy minute-level spreads, and transaction costs is enough to erase many apparent midpoint profits.
+That negative result is useful: it shows that the weakness is not just an overly conservative entry threshold, and it also shows how sensitive the conclusion is to the fill model. The combination of a small proxy universe, noisy minute-level spreads, and transaction costs is enough to erase many apparent midpoint profits.
 
-The separate XLK-only timing extension remains in the repository as an alternative strategy class: use the sparse basket premium as a fair-value signal, but execute only XLK.
+The separate XLK-only timing extension remains in the repository as an alternative strategy class: use the sparse basket premium as a fair-value signal, but execute only XLK. Under the bid/ask boundary-cost audit, the March timing extension remains positive at `+638.42` bps net.
 
 ## Current Experiment Structure
 
@@ -23,9 +23,11 @@ Legacy sparse mean-reversion tests estimate a basket hedge for XLK and evaluate 
 Relevant files:
 
 - `scripts/run_final_analysis.py`
+- `scripts/run_sparse_bidask_execution.py`
 - `scripts/run_experiment_suite.py`
 - `output/tables/enhanced_sparse_candidates.csv`
 - `output/tables/enhanced_backtest_summary.csv`
+- `output/tables/enhanced_sparse_bidask_comparison.csv`
 - `output/figures/enhanced_sparse_cumulative_net.png`
 
 ### Experiment B: Pair Trading on the Old Eight Names
@@ -59,7 +61,9 @@ z < -entry_z  -> long residual: long XLK, short beta * stock
 Relevant files:
 
 - `scripts/run_old_data_method_upgrade.py`
+- `scripts/run_old_data_execution_audit_fixed.py`
 - `output/tables/old_pair_leaderboard.csv`
+- `output/tables/old_pair_validation_selected_execution_fixed.csv`
 - `output/tables/old_pair_zscore_grid.csv`
 - `output/tables/old_pair_trade_log.csv`
 - `output/figures/pair_leaderboard_test_net_bps.png`
@@ -115,8 +119,10 @@ The timing extension uses sparse-basket fair-value information to trade only XLK
 Relevant files:
 
 - `scripts/run_timing_extension.py`
+- `scripts/run_timing_bidask_execution.py`
 - `scripts/run_timing_robustness.py`
 - `output/tables/timing_extension_summary.csv`
+- `output/tables/timing_extension_bidask_comparison.csv`
 - `output/tables/timing_robustness_decision.csv`
 - `output/tables/timing_robustness_grid.csv`
 - `output/figures/timing_extension_cumulative_net.png`
@@ -135,20 +141,26 @@ The split is designed to avoid choosing parameters on March test data. Hedge rat
 
 ## Transaction Cost and Execution Model
 
-The old quote parquet files include minute-level `bid`, `ask`, `bidsiz`, and `asksiz`, so the pair module now computes actual entry and exit fills from contemporaneous NBBO quotes.
+The old quote parquet files include minute-level `bid`, `ask`, `bidsiz`, and `asksiz`, so the execution audit can charge top-of-book bid/ask boundary costs at position-change timestamps.
 
-For a long residual trade, the script buys XLK at the prevailing ask and shorts the stock leg at the prevailing bid. At exit, it sells XLK at the prevailing bid and covers the stock leg at the prevailing ask.
+The current accounting convention is:
 
-For a short residual trade, the script shorts XLK at the bid and buys the stock leg at the ask. At exit, it covers XLK at the ask and sells the stock leg at the bid.
+- gross P&L is midpoint residual return over the same holding window;
+- cost is explicit bid/ask boundary cost at entries, exits, and position changes;
+- net P&L is midpoint gross P&L minus boundary execution cost.
 
-The trade log keeps `midpoint_gross_bps`, `actual_bidask_net_bps`, and `actual_execution_cost_bps`.
+For a long residual trade, the script buys XLK at the prevailing ask and shorts the stock leg at the prevailing bid. At exit, it sells XLK at the prevailing bid and covers the stock leg at the prevailing ask. For a short residual trade, the script shorts XLK at the bid and buys the stock leg at the ask. At exit, it covers XLK at the ask and sells the stock leg at the bid.
 
-The repository includes a direct midpoint-vs-bid/ask comparison:
+This is still a minute-level top-of-book audit. It does not solve quote depth, queue position, latency, partial fills, borrow, or market impact.
+
+The repository includes direct execution comparisons:
 
 - `output/tables/midpoint_vs_bidask_execution_comparison.csv`
-- `output/figures/midpoint_vs_bidask_execution_comparison.png`
+- `output/tables/old_pair_validation_selected_execution_fixed.csv`
+- `output/tables/enhanced_sparse_bidask_comparison.csv`
+- `output/tables/timing_extension_bidask_comparison.csv`
 
-The comparison table also keeps the older half-spread approximation as a benchmark, so the report can distinguish midpoint-only, half-spread-cost, and explicit bid/ask-fill economics.
+The comparison tables keep the older half-spread approximation where available, so the report can distinguish midpoint-only, half-spread-cost, and explicit bid/ask boundary-cost economics.
 
 ## Latest Method Upgrade: What Changed
 
@@ -166,7 +178,7 @@ The update includes:
 - max-holding risk controls;
 - z-score stop-loss diagnostics;
 - trade-level logging with entry time, exit time, direction, holding minutes, P&L, cost, and exit reason;
-- actual buy-at-ask / sell-at-bid pair execution from old quote parquet files;
+- consistent midpoint-gross-minus-bid/ask-boundary-cost execution auditing from old quote parquet files;
 - pair leaderboard ranked by validation-selected March test results;
 - data diagnostics for spreads, volume, quote updates, trade counts, and missing rates;
 - strategy diagnostics for gross/cost/net bps, trades, holding time, drawdown, and turnover;
@@ -183,31 +195,35 @@ The full grid contains:
 219,137 trade-log rows
 ```
 
-Validation-selected March test results from `output/tables/old_pair_leaderboard.csv`:
+Validation-selected March test results after the fixed execution-accounting audit from `output/tables/old_pair_validation_selected_execution_fixed.csv`:
 
-| Pair | Validation Net bps | March Test Net bps | March Trades | Main Interpretation |
-|---|---:|---:|---:|---|
-| XLK-ORCL | 3665.35 | 10248.72 | 112 | Strong quote-fill result; should be treated as an execution diagnostic |
-| XLK-MSFT | 234.67 | -232.96 | 17 | Positive validation, negative test |
-| XLK-AAPL | 279.65 | -308.56 | 14 | Positive validation, negative test |
-| XLK-CRM | 233.63 | -312.75 | 14 | Positive validation, negative test |
-| XLK-AVGO | 104.12 | -401.04 | 19 | Positive validation, negative test |
-| XLK-NVDA | 337.88 | -483.73 | 32 | More trades, still cost-sensitive |
-| XLK-AMD | 266.84 | -544.06 | 31 | Negative March after costs |
-| XLK-CSCO | 215.25 | -640.63 | 38 | Highest selected-rule test loss |
+| Pair | Validation Net bps | March Gross bps | March Cost bps | March Net bps | March Trades |
+|---|---:|---:|---:|---:|---:|
+| XLK-ORCL | 264.18 | 509.66 | 734.76 | -225.10 | 17 |
+| XLK-MSFT | 234.67 | 415.20 | 648.19 | -232.99 | 17 |
+| XLK-AAPL | 279.65 | 358.66 | 667.12 | -308.45 | 14 |
+| XLK-CRM | 235.94 | 318.01 | 633.14 | -315.13 | 14 |
+| XLK-AVGO | 104.12 | 753.64 | 1153.16 | -399.52 | 19 |
+| XLK-NVDA | 337.88 | 1303.73 | 1787.47 | -483.73 | 32 |
+| XLK-AMD | 266.84 | 908.59 | 1453.11 | -544.52 | 31 |
+| XLK-CSCO | 220.43 | 844.95 | 1485.58 | -640.63 | 38 |
 
-For the selected XLK-ORCL rule, the execution comparison is:
+Sparse market-neutral audit:
 
-| Execution Model | Sample | Gross bps | Cost bps | Net bps |
-|---|---|---:|---:|---:|
-| Midpoint no cost | Validation | 918.89 | 0.00 | 918.89 |
-| Half-spread cost approximation | Validation | 918.89 | 1209.27 | -290.38 |
-| Actual bid/ask fills | Validation | 4870.06 | 1204.71 | 3665.35 |
-| Midpoint no cost | Test | 3227.84 | 0.00 | 3227.84 |
-| Half-spread cost approximation | Test | 3227.84 | 3337.79 | -109.95 |
-| Actual bid/ask fills | Test | 13583.04 | 3334.33 | 10248.72 |
+| Sample | Old Net bps | Fixed Bid/Ask Cost bps | Fixed Net bps |
+|---|---:|---:|---:|
+| Train | 86.93 | 158.46 | -40.74 |
+| Test | -89.03 | 33.16 | -115.24 |
 
-This is the key result of the execution update: the explicit fill model can differ materially from the half-spread approximation. Because this assumes fills at minute NBBO quotes, the ORCL result should be presented as a diagnostic rather than a production trading claim until quote depth, size, latency, and tradeability are stress-tested.
+XLK-only timing audit:
+
+| Sample | Old Net bps | Fixed Bid/Ask Cost bps | Fixed Net bps |
+|---|---:|---:|---:|
+| January | 144.93 | 142.29 | 144.89 |
+| February | 264.61 | 137.45 | 264.60 |
+| March | 638.35 | 232.32 | 638.42 |
+
+The key result of the execution update is that ORCL and sparse market-neutral positives should not be presented as alpha, while the XLK-only timing extension survives the stricter top-of-book boundary-cost audit.
 
 ## Important Output Files
 
@@ -217,11 +233,15 @@ This is the key result of the execution update: the explicit fill model can diff
 | `output/tables/pair_trading_leaderboard.csv` | Alias table for the dedicated pair-trading module |
 | `output/tables/old_pair_zscore_grid.csv` | Full pair z-score grid |
 | `output/tables/old_pair_trade_log.csv` | Trade-level log for all pair/grid runs |
+| `output/tables/old_pair_trade_log_execution_fixed.csv` | Trade-level pair log under consistent execution accounting |
+| `output/tables/old_pair_validation_selected_execution_fixed.csv` | Validation-selected pair leaderboard under fixed execution accounting |
 | `output/tables/old_pair_stoploss_grid.csv` | Z-score stop-loss diagnostic grid |
 | `output/tables/old_strategy_diagnostics.csv` | Strategy-level diagnostics |
 | `output/tables/old_data_diagnostics.csv` | Data-quality and spread diagnostics |
 | `output/tables/old_selection_audit.csv` | Data-snooping and claim-validity audit |
 | `output/tables/midpoint_vs_bidask_execution_comparison.csv` | Midpoint vs bid/ask-aware execution comparison |
+| `output/tables/enhanced_sparse_bidask_comparison.csv` | Sparse old cost approximation vs fixed bid/ask boundary audit |
+| `output/tables/timing_extension_bidask_comparison.csv` | Timing old cost approximation vs fixed bid/ask boundary audit |
 | `output/figures/heatmap_validation_net_bps.png` | Validation z-score heatmap |
 | `output/figures/heatmap_test_net_bps.png` | Test z-score heatmap |
 | `output/figures/heatmap_trade_count.png` | Trade-count heatmap |
@@ -236,6 +256,13 @@ Run the new method-upgrade experiment:
 
 ```bash
 python3 scripts/run_old_data_method_upgrade.py
+python3 scripts/run_old_data_execution_audit_fixed.py
+python3 scripts/run_final_analysis.py
+python3 scripts/run_sparse_bidask_execution.py
+python3 scripts/run_timing_extension.py
+python3 scripts/run_timing_bidask_execution.py
+python3 scripts/run_timing_robustness.py
+python3 scripts/make_report.py
 ```
 
 For a faster smoke test:
