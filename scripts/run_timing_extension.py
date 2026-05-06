@@ -13,19 +13,32 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from project_config import ETF, TABLES as CONFIG_TABLES, project_window, split_dates
 
 ROOT = Path(__file__).resolve().parents[1]
 PROCESSED = ROOT / "data" / "processed"
 OUTPUT = ROOT / "output"
 TABLES = OUTPUT / "tables"
 FIGURES = OUTPUT / "figures"
-ETF = "XLK"
-SPARSE_WEIGHTS = pd.Series({"MSFT": 0.0797, "NVDA": 0.2257, "ORCL": 0.0745, "CRM": 0.0602, "AMD": 0.1074})
+
+
+def sparse_weights() -> pd.Series:
+    path = CONFIG_TABLES / "selected_xlk_holdings.csv"
+    if path.exists():
+        df = pd.read_csv(path).head(5)
+        w = df.set_index("symbol")["basket_weight"].astype(float)
+        return w / w.sum()
+    return pd.Series({"MSFT": 0.0797, "NVDA": 0.2257, "ORCL": 0.0745, "AMD": 0.1074})
+
+
+SPARSE_WEIGHTS = sparse_weights()
+START, END = project_window()
+TRAIN_END, VALIDATION_END, TEST_END = split_dates()
 PERIODS = {
-    "jan": ("2026-01-01", "2026-02-01"),
-    "feb": ("2026-02-01", "2026-03-01"),
-    "mar": ("2026-03-01", "2026-04-01"),
-    "all": ("2026-01-01", "2026-04-01"),
+    "train": (START, TRAIN_END),
+    "validation": (TRAIN_END, VALIDATION_END),
+    "test": (VALIDATION_END, TEST_END),
+    "all": (START, END),
 }
 
 
@@ -165,11 +178,11 @@ def summarize(frame: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataF
     }.items():
         turn = selected["turnover"] if label in {"selected", "sign_flip"} else pos.diff().abs().fillna(pos.abs())
         net = pos.shift(1).fillna(0.0) * selected["xlk_ret_mid"] - turn * selected["cost_ret"].where(selected["turnover"] > 0, 0.0).replace(0.0, np.nan).ffill().fillna(0.0)
-        train = net.loc[net.index < "2026-03-01"]
-        mar = net.loc[net.index >= "2026-03-01"]
-        controls.append({"control": label, "train_net_bps": 1e4 * train.sum(), "mar_net_bps": 1e4 * mar.sum(), "avg_pos_mar": pos.loc[pos.index >= "2026-03-01"].mean()})
+        train = net.loc[net.index < VALIDATION_END]
+        test = net.loc[(net.index >= VALIDATION_END) & (net.index < TEST_END)]
+        controls.append({"control": label, "train_net_bps": 1e4 * train.sum(), "test_net_bps": 1e4 * test.sum(), "avg_pos_test": pos.loc[(pos.index >= VALIDATION_END) & (pos.index < TEST_END)].mean()})
 
-    mar = frame.loc[frame.index >= "2026-03-01"]
+    mar = frame.loc[(frame.index >= VALIDATION_END) & (frame.index < TEST_END)]
     rng = np.random.default_rng(11)
     vals = mar["position"].to_numpy()
     er = mar["xlk_ret_mid"].to_numpy()
@@ -186,9 +199,9 @@ def summarize(frame: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataF
     sims = np.array(sims)
     controls.extend(
         [
-            {"control": "circular_shift_mean", "train_net_bps": np.nan, "mar_net_bps": sims.mean(), "avg_pos_mar": np.nan},
-            {"control": "circular_shift_p95", "train_net_bps": np.nan, "mar_net_bps": np.percentile(sims, 95), "avg_pos_mar": np.nan},
-            {"control": "selected_vs_circular_pvalue", "train_net_bps": np.nan, "mar_net_bps": (sims >= obs).mean(), "avg_pos_mar": np.nan},
+            {"control": "circular_shift_mean", "train_net_bps": np.nan, "test_net_bps": sims.mean(), "avg_pos_test": np.nan},
+            {"control": "circular_shift_p95", "train_net_bps": np.nan, "test_net_bps": np.percentile(sims, 95), "avg_pos_test": np.nan},
+            {"control": "selected_vs_circular_pvalue", "train_net_bps": np.nan, "test_net_bps": (sims >= obs).mean(), "avg_pos_test": np.nan},
         ]
     )
     controls_df = pd.DataFrame(controls)
@@ -212,7 +225,7 @@ def summarize(frame: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataF
 def plots(frame: pd.DataFrame) -> None:
     plt.figure(figsize=(10, 4.8))
     plt.plot(frame.index, frame["cum_net_bps"], label="XLK timing net")
-    plt.axvline(pd.Timestamp("2026-03-01"), color="black", linestyle="--", linewidth=1, label="March OOS")
+    plt.axvline(VALIDATION_END, color="black", linestyle="--", linewidth=1, label="test start")
     plt.axhline(0, color="black", linewidth=0.8)
     plt.title("Sparse-Basket Premium XLK Timing: Cumulative Net P&L")
     plt.ylabel("basis points")
@@ -221,13 +234,13 @@ def plots(frame: pd.DataFrame) -> None:
     plt.savefig(FIGURES / "timing_extension_cumulative_net.png", dpi=180)
     plt.close()
 
-    march = frame.loc[frame.index >= "2026-03-01"]
+    march = frame.loc[(frame.index >= VALIDATION_END) & (frame.index < TEST_END)]
     plt.figure(figsize=(10, 4.8))
     plt.plot(np.arange(len(march)), march["signal_bps"], linewidth=0.8, label="signal bps")
     plt.axhline(50, color="black", linestyle="--", linewidth=0.8)
     plt.axhline(-50, color="black", linestyle="--", linewidth=0.8)
     plt.axhline(0, color="black", linewidth=0.8)
-    plt.title("Timing Extension Signal, March Session Sequence")
+    plt.title("Timing Extension Signal, Test Session Sequence")
     plt.ylabel("premium signal, bps")
     plt.xlabel("March minute sequence")
     plt.tight_layout()

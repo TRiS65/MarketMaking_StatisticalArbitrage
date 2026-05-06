@@ -18,19 +18,21 @@ from execution_fills import (
     summarize_by_sample,
     xlk_transaction_cost_at_time,
 )
+from project_config import split_dates
 
 ROOT = Path(__file__).resolve().parents[1]
 PROCESSED = ROOT / "data" / "processed"
 TABLES = ROOT / "output" / "tables"
+TRAIN_END, VALIDATION_END, TEST_END = split_dates()
 
 
 def sample_name(ts: pd.Timestamp) -> str:
-    if ts < pd.Timestamp("2026-02-01"):
-        return "jan"
-    if ts < pd.Timestamp("2026-03-01"):
-        return "feb"
-    if ts < pd.Timestamp("2026-04-01"):
-        return "mar"
+    if ts < TRAIN_END:
+        return "train"
+    if ts < VALIDATION_END:
+        return "validation"
+    if ts < TEST_END:
+        return "test"
     return "other"
 
 

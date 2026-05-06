@@ -1,0 +1,41 @@
+family,signal_view,hedge_method,subset,threshold_mode,center_mode,hedge_fraction,orientation,cost_gate_mult,family_median_train_net_bps,family_mean_train_net_bps,family_std_train_net_bps,family_positive_rate,family_rule_count
+partial_or_full_hedge,micro_conf_0.5,ridge_pos,NVDA AMD PLTR,fixed_bps,mean,1.0,-1,0.0,-52153.58234433924,-52153.58234433924,,0.0,1
+partial_or_full_hedge,micro_conf_0.5,ridge_pos,NVDA AMD PLTR,fixed_bps,mean,1.0,1,0.0,-1314.3534893191948,-1314.3534893191948,,0.0,1
+partial_or_full_hedge,micro_conf_0.5,ridge_pos,NVDA AMD PLTR,zscore,mean,1.0,-1,0.0,-1668.7384920478216,-1668.7384920478216,,0.0,1
+partial_or_full_hedge,micro_conf_0.5,ridge_pos,NVDA AMD PLTR,zscore,mean,1.0,1,0.0,41.857721027692186,41.857721027692186,,1.0,1
+partial_or_full_hedge,micro_conf_0.5,ridge_pos,NVDA AMD PLTR LRCX AMAT,fixed_bps,mean,1.0,-1,0.0,-57197.94476575685,-57197.94476575685,,0.0,1
+partial_or_full_hedge,micro_conf_0.5,ridge_pos,NVDA AMD PLTR LRCX AMAT,fixed_bps,mean,1.0,1,0.0,-1237.6597258582913,-1237.6597258582913,,0.0,1
+partial_or_full_hedge,micro_conf_0.5,ridge_pos,NVDA AMD PLTR LRCX AMAT,zscore,mean,1.0,-1,0.0,-1023.3212509543798,-1023.3212509543798,,0.0,1
+partial_or_full_hedge,micro_conf_0.5,ridge_pos,NVDA AMD PLTR LRCX AMAT,zscore,mean,1.0,1,0.0,107.48700762291868,107.48700762291868,,1.0,1
+partial_or_full_hedge,micro_shrink_0.5,ridge_pos,NVDA AMD PLTR LRCX AMAT,fixed_bps,mean,1.0,-1,0.0,-57755.98608413727,-57755.98608413727,,0.0,1
+partial_or_full_hedge,micro_shrink_0.5,ridge_pos,NVDA AMD PLTR LRCX AMAT,fixed_bps,mean,1.0,1,0.0,-1287.2656685807815,-1287.2656685807815,,0.0,1
+partial_or_full_hedge,micro_shrink_0.5,ridge_pos,NVDA AMD PLTR LRCX AMAT,zscore,mean,1.0,-1,0.0,-909.2346107985344,-909.2346107985344,,0.0,1
+partial_or_full_hedge,micro_shrink_0.5,ridge_pos,NVDA AMD PLTR LRCX AMAT,zscore,mean,1.0,1,0.0,115.6343713331784,115.6343713331784,,1.0,1
+partial_or_full_hedge,mid,ridge_pos,NVDA AMD PLTR,fixed_bps,mean,1.0,-1,0.0,-52455.13031001664,-52455.13031001664,,0.0,1
+partial_or_full_hedge,mid,ridge_pos,NVDA AMD PLTR,fixed_bps,mean,1.0,1,0.0,-1311.7543620005897,-1311.7543620005897,,0.0,1
+partial_or_full_hedge,mid,ridge_pos,NVDA AMD PLTR,zscore,mean,1.0,-1,0.0,-1603.2667234675466,-1603.2667234675466,,0.0,1
+partial_or_full_hedge,mid,ridge_pos,NVDA AMD PLTR,zscore,mean,1.0,1,0.0,69.34198020312613,69.34198020312613,,1.0,1
+partial_or_full_hedge,mid,ridge_pos,NVDA AMD PLTR LRCX AMAT,fixed_bps,mean,1.0,-1,0.0,-57471.99976290193,-57471.99976290193,,0.0,1
+partial_or_full_hedge,mid,ridge_pos,NVDA AMD PLTR LRCX AMAT,fixed_bps,mean,1.0,1,0.0,-1249.9186132157477,-1249.9186132157477,,0.0,1
+partial_or_full_hedge,mid,ridge_pos,NVDA AMD PLTR LRCX AMAT,zscore,mean,1.0,-1,0.0,-1012.5492940642356,-1012.5492940642356,,0.0,1
+partial_or_full_hedge,mid,ridge_pos,NVDA AMD PLTR LRCX AMAT,zscore,mean,1.0,1,0.0,107.6854075016947,107.6854075016947,,1.0,1
+xlk_only_timing,micro_conf_0.5,ridge_pos,NVDA AMD PLTR,fixed_bps,mean,0.0,-1,0.0,-23693.464208604204,-23693.464208604204,,0.0,1
+xlk_only_timing,micro_conf_0.5,ridge_pos,NVDA AMD PLTR,fixed_bps,mean,0.0,1,0.0,38.028146980827046,38.028146980827046,,1.0,1
+xlk_only_timing,micro_conf_0.5,ridge_pos,NVDA AMD PLTR,zscore,mean,0.0,-1,0.0,-714.4457863419854,-714.4457863419854,,0.0,1
+xlk_only_timing,micro_conf_0.5,ridge_pos,NVDA AMD PLTR,zscore,mean,0.0,1,0.0,457.58464441773185,457.58464441773185,,1.0,1
+xlk_only_timing,micro_conf_0.5,ridge_pos,NVDA AMD PLTR LRCX AMAT,fixed_bps,mean,0.0,-1,0.0,-19493.482120766428,-19493.482120766428,,0.0,1
+xlk_only_timing,micro_conf_0.5,ridge_pos,NVDA AMD PLTR LRCX AMAT,fixed_bps,mean,0.0,1,0.0,179.97047385355464,179.97047385355464,,1.0,1
+xlk_only_timing,micro_conf_0.5,ridge_pos,NVDA AMD PLTR LRCX AMAT,zscore,mean,0.0,-1,0.0,-323.80758823021716,-323.80758823021716,,0.0,1
+xlk_only_timing,micro_conf_0.5,ridge_pos,NVDA AMD PLTR LRCX AMAT,zscore,mean,0.0,1,0.0,327.6377264627699,327.6377264627699,,1.0,1
+xlk_only_timing,micro_shrink_0.5,ridge_pos,NVDA AMD PLTR LRCX AMAT,fixed_bps,mean,0.0,-1,0.0,-19751.12717645486,-19751.12717645486,,0.0,1
+xlk_only_timing,micro_shrink_0.5,ridge_pos,NVDA AMD PLTR LRCX AMAT,fixed_bps,mean,0.0,1,0.0,-87.81411129471017,-87.81411129471017,,0.0,1
+xlk_only_timing,micro_shrink_0.5,ridge_pos,NVDA AMD PLTR LRCX AMAT,zscore,mean,0.0,-1,0.0,-271.77599779234885,-271.77599779234885,,0.0,1
+xlk_only_timing,micro_shrink_0.5,ridge_pos,NVDA AMD PLTR LRCX AMAT,zscore,mean,0.0,1,0.0,330.03127780833813,330.03127780833813,,1.0,1
+xlk_only_timing,mid,ridge_pos,NVDA AMD PLTR,fixed_bps,mean,0.0,-1,0.0,-24112.477131806278,-24112.477131806278,,0.0,1
+xlk_only_timing,mid,ridge_pos,NVDA AMD PLTR,fixed_bps,mean,0.0,1,0.0,72.45621583390128,72.45621583390128,,1.0,1
+xlk_only_timing,mid,ridge_pos,NVDA AMD PLTR,zscore,mean,0.0,-1,0.0,-688.9920151308113,-688.9920151308113,,0.0,1
+xlk_only_timing,mid,ridge_pos,NVDA AMD PLTR,zscore,mean,0.0,1,0.0,472.5459568673186,472.5459568673186,,1.0,1
+xlk_only_timing,mid,ridge_pos,NVDA AMD PLTR LRCX AMAT,fixed_bps,mean,0.0,-1,0.0,-19663.948984905302,-19663.948984905302,,0.0,1
+xlk_only_timing,mid,ridge_pos,NVDA AMD PLTR LRCX AMAT,fixed_bps,mean,0.0,1,0.0,157.7699560216853,157.7699560216853,,1.0,1
+xlk_only_timing,mid,ridge_pos,NVDA AMD PLTR LRCX AMAT,zscore,mean,0.0,-1,0.0,-315.2269848070452,-315.2269848070452,,0.0,1
+xlk_only_timing,mid,ridge_pos,NVDA AMD PLTR LRCX AMAT,zscore,mean,0.0,1,0.0,327.6377264627699,327.6377264627699,,1.0,1

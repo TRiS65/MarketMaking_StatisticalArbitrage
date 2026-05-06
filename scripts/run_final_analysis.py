@@ -24,6 +24,7 @@ import pandas as pd
 import statsmodels.api as sm
 from statsmodels.tsa.stattools import adfuller
 
+from project_config import ETF, constituents as project_constituents, split_dates
 
 ROOT = Path(__file__).resolve().parents[1]
 PROCESSED = ROOT / "data" / "processed"
@@ -31,9 +32,8 @@ OUTPUT = ROOT / "output"
 TABLES = OUTPUT / "tables"
 FIGURES = OUTPUT / "figures"
 
-ETF = "XLK"
-CONSTITUENTS = ["AAPL", "MSFT", "NVDA", "AVGO", "ORCL", "CRM", "AMD", "CSCO"]
-TRAIN_END = pd.Timestamp("2026-03-01")
+CONSTITUENTS = project_constituents()
+TRAIN_END = split_dates()[1]
 
 
 @dataclass
@@ -74,7 +74,8 @@ def align_panel() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     mid = fill(mid)
     micro = fill(micro)
     spread_bps = fill(spread_bps)
-    common = mid.dropna(subset=[ETF] + CONSTITUENTS).index
+    available = [s for s in [ETF] + CONSTITUENTS if s in mid.columns]
+    common = mid.dropna(subset=available).index
     return mid.loc[common].astype(float), micro.loc[common].astype(float), spread_bps.loc[common].astype(float)
 
 
@@ -142,8 +143,9 @@ def evaluate_candidates(signal_ret: pd.DataFrame, spread_bps: pd.DataFrame) -> p
     rows: list[dict] = []
     candidates: list[Candidate] = []
 
+    search_universe = CONSTITUENTS[:12]
     for k in range(2, 6):
-        for subset in itertools.combinations(CONSTITUENTS, k):
+        for subset in itertools.combinations(search_universe, k):
             beta = ridge_positive_beta(signal_ret, subset, train_mask)
             if beta is None:
                 continue

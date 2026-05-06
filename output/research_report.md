@@ -1,210 +1,219 @@
-# Microstructure-Based Fair Value and Intraday Statistical Arbitrage in XLK
+# XLK Microstructure Statistical Arbitrage: New-Data Progress Report
 
-## Executive Summary
+## Dataset
 
-This final version implements a literature-grounded diagnostic test of ETF-basket intraday statistical arbitrage using WRDS TAQ quotes/trades for January-March 2026 and the supplied XLK holdings file.  It now reports two strategy classes side by side.
+- Raw data: `/Users/yezi/Desktop/Statistical_Arbitrage/final_proj/data/newdata`
+- Sample: `2025-11-01` to `2026-05-01`
+- Universe: `XLK` + 19 constituents
+- Requested-but-dropped symbols after quote/trade cleaning: `SNDK`
+- Split: train before `2026-02-01`, validation before `2026-03-01`, test before `2026-05-01`
 
-The original market-neutral ETF-basket arbitrage conclusion is negative.  The active sparse microprice-signal hedge strategy is not robust to the exact top-of-book bid/ask boundary-cost audit: it has -40.74 bps net P&L in January-February and -115.24 bps net P&L in March.  The no-trade benchmark therefore dominates the active market-neutral rule in the honest March test.
+## Main Research Position
 
-However, a second strategy class does produce a positive result: use the sparse basket microprice premium as a fair-value timing signal, but execute only XLK.  The fixed 50/25 bps timing extension earns 638.42 bps net in March under the same bid/ask boundary-cost audit.  A stricter stability-island robustness selection, chosen from January-February only, selects `micro_shrink_0.75_cw10d_e60_x0_mh240` and earns 120.05 bps net in March.  This is not market-neutral ETF arbitrage; it is a sparse-basket fair-value signal for intraday XLK timing.
+The project now separates two claims:
 
-## Data Construction
+1. **Market-neutral XLK-vs-basket arbitrage.** This remains the hard claim.  It must survive alternative spread definitions, explicit transaction-cost scenarios, and out-of-sample testing.
+2. **Sparse-basket fair-value timing.** This is a different claim: the constituent basket is used as a signal, while only XLK is traded.
 
-Raw WRDS TAQ files were scanned with DuckDB and aggregated to one-minute parquet files.  Quotes were filtered to regular hours, valid positive bid/ask prices and sizes, non-cancelled quotes, quoted spreads below 100 bps, and prices within 500 bps of a centered rolling median to remove narrow-spread bad ticks.  Trades were filtered to regular hours, positive price/size, and `TR_CORR = 00`.
+This language directly addresses the professor's concern that price definition, spread construction, and execution assumptions can dominate high-frequency results.
 
-The eight-name selected basket covers 53.54% of the XLK holdings file and is therefore treated as an incomplete risk proxy rather than a literal NAV replication basket.
+## Top Holdings Used
 
-## Selected Holdings
+| symbol   | name                        |   official_weight_pct |   basket_weight | used_in_clean_panel   |
+|:---------|:----------------------------|----------------------:|----------------:|:----------------------|
+| NVDA     | NVIDIA CORP                 |              14.492   |       0.186069  | True                  |
+| AAPL     | APPLE INC                   |              12.3596  |       0.158691  | True                  |
+| MSFT     | MICROSOFT CORP              |               9.24841 |       0.118745  | True                  |
+| AVGO     | BROADCOM INC                |               6.00254 |       0.0770694 | True                  |
+| MU       | MICRON TECHNOLOGY INC       |               4.46675 |       0.0573507 | True                  |
+| AMD      | ADVANCED MICRO DEVICES      |               4.30259 |       0.055243  | True                  |
+| INTC     | INTEL CORP                  |               3.42365 |       0.0439579 | True                  |
+| CSCO     | CISCO SYSTEMS INC           |               2.6563  |       0.0341054 | True                  |
+| PLTR     | PALANTIR TECHNOLOGIES INC A |               2.40886 |       0.0309285 | True                  |
+| LRCX     | LAM RESEARCH CORP           |               2.34648 |       0.0301275 | True                  |
+| AMAT     | APPLIED MATERIALS INC       |               2.26041 |       0.0290225 | True                  |
+| ORCL     | ORACLE CORP                 |               2.13269 |       0.0273826 | True                  |
+| TXN      | TEXAS INSTRUMENTS INC       |               1.86674 |       0.023968  | True                  |
+| KLAC     | KLA CORP                    |               1.6563  |       0.021266  | True                  |
+| IBM      | INTL BUSINESS MACHINES CORP |               1.58865 |       0.0203974 | True                  |
+| ADI      | ANALOG DEVICES INC          |               1.42237 |       0.0182625 | True                  |
+| QCOM     | QUALCOMM INC                |               1.38244 |       0.0177498 | True                  |
+| ANET     | ARISTA NETWORKS INC         |               1.30529 |       0.0167592 | True                  |
+| SNDK     | SANDISK CORP                |               1.28246 |       0.0164661 | False                 |
+| APH      | AMPHENOL CORP CL A          |               1.28031 |       0.0164385 | True                  |
 
-| symbol   | name                   |   official_weight_pct |   basket_weight |
-|:---------|:-----------------------|----------------------:|----------------:|
-| NVDA     | NVIDIA CORP            |              15.4537  |       0.288617  |
-| AAPL     | APPLE INC              |              12.6167  |       0.235634  |
-| MSFT     | MICROSOFT CORP         |               9.77076 |       0.182481  |
-| AVGO     | BROADCOM INC           |               5.96344 |       0.111375  |
-| AMD      | ADVANCED MICRO DEVICES |               3.4364  |       0.0641792 |
-| CSCO     | CISCO SYSTEMS INC      |               2.65657 |       0.0496148 |
-| ORCL     | ORACLE CORP            |               2.30833 |       0.043111  |
-| CRM      | SALESFORCE INC         |               1.33794 |       0.0249878 |
+## Data Diagnostics
 
-## Minute Data Diagnostics
+| symbol   | start               | end                 |   minutes |   median_spread_bps |   avg_volume |   trade_count |
+|:---------|:--------------------|:--------------------|----------:|--------------------:|-------------:|--------------:|
+| AAPL     | 2025-11-03 09:30:00 | 2026-04-30 15:59:00 |     42582 |             2.56631 |     82352.7  |      68484338 |
+| ADI      | 2025-11-03 09:33:00 | 2026-04-30 15:59:00 |     31149 |            25.7225  |      6993.84 |       5539665 |
+| AMAT     | 2025-11-03 09:31:00 | 2026-04-30 15:59:00 |     33850 |            24.0668  |     13095.5  |       9720939 |
+| AMD      | 2025-11-03 09:30:00 | 2026-04-30 15:59:00 |     40758 |             9.17053 |     85838    |      51260690 |
+| ANET     | 2025-11-03 09:30:00 | 2026-04-30 15:59:00 |     36432 |            19.4284  |     16276.7  |      10029069 |
+| APH      | 2025-11-03 09:30:00 | 2026-04-30 15:59:00 |     38859 |            13.9352  |     18489.2  |      10984681 |
+| AVGO     | 2025-11-03 09:30:00 | 2026-04-30 15:59:00 |     39660 |             8.99922 |     51537.5  |      48065160 |
+| CSCO     | 2025-11-03 09:30:00 | 2026-04-30 15:59:00 |     45546 |             2.55135 |     39349.6  |      21108602 |
+| IBM      | 2025-11-03 09:31:00 | 2026-04-30 15:59:00 |     36215 |             9.59331 |     10579.8  |      11042119 |
+| INTC     | 2025-11-03 09:31:00 | 2026-04-30 15:59:00 |     46062 |             2.85063 |    217147    |      57888289 |
+| KLAC     | 2025-11-03 09:34:00 | 2026-04-30 15:59:00 |     34736 |            40.8643  |      1845.05 |       4064568 |
+| LRCX     | 2025-11-03 09:31:00 | 2026-04-30 15:59:00 |     34908 |            16.0727  |     20680.7  |      13743943 |
+| MSFT     | 2025-11-03 09:30:00 | 2026-04-30 15:59:00 |     41853 |             5.21241 |     60859.5  |      74046055 |
+| MU       | 2025-11-03 09:30:00 | 2026-04-30 15:59:00 |     38585 |            12.0517  |     76920.8  |      50893368 |
+| NVDA     | 2025-11-03 09:30:00 | 2026-04-30 15:59:00 |     46210 |             1.57068 |    383179    |     281818587 |
+| ORCL     | 2025-11-03 09:30:00 | 2026-04-30 15:59:00 |     37694 |             7.29189 |     62148.4  |      40996967 |
+| PLTR     | 2025-11-03 09:32:00 | 2026-04-30 15:59:00 |     43589 |             4.7727  |    107564    |      71844161 |
+| QCOM     | 2025-11-03 09:31:00 | 2026-04-30 15:59:00 |     37070 |            11.409   |     20822.2  |      15491983 |
+| TXN      | 2025-11-03 09:30:00 | 2026-04-30 15:59:00 |     35122 |            17.491   |     13639.8  |       9173623 |
+| XLK      | 2025-11-03 09:30:00 | 2026-04-30 15:59:00 |     47695 |             1.06733 |     36557.1  |      27915985 |
 
-| symbol   |   minutes |   median_spread_bps |   avg_volume |   trade_count |
-|:---------|----------:|--------------------:|-------------:|--------------:|
-| AAPL     |     20861 |            2.9721   |      87114.8 |      35436759 |
-| AMD      |     19553 |            9.33358  |      83976.1 |      24537293 |
-| AVGO     |     18860 |           10.1902   |      51282.1 |      22154477 |
-| CRM      |     18530 |           12.4987   |      26884.2 |       8300230 |
-| CSCO     |     22670 |            2.55722  |      43549.1 |      11425050 |
-| MSFT     |     20797 |            5.15331  |      71026.9 |      41606645 |
-| NVDA     |     22693 |            1.19439  |     390865   |     138130510 |
-| ORCL     |     18190 |            7.6314   |      61075.4 |      18803754 |
-| XLK      |     23748 |            0.733003 |      48286.9 |      15447039 |
+## Professor Feedback Checks
 
-## Final Method
+The new `run_professor_robustness.py` module answers the main methodology questions:
 
-The final experiment uses the literature in the project folder as design constraints:
+- `r_XLK,t` is explicitly one-minute log return, not price.
+- Cumulative residual-return spreads are compared against direct log-price spreads and log-price regression residuals.
+- Gross/no-cost P&L is separated from 0.25-spread, 0.50-spread, and clipped last-trade execution proxies.
+- OU / Avellaneda-Lee style diagnostics are reported for each spread.
 
-- d'Aspremont: search sparse mean-reverting baskets rather than forcing a dense normalized holdings basket.
-- Kanamura, Rachev, and Fabozzi: evaluate spread trading as a first-passage / mean-reversion problem.
-- Leung and Li: use entry/exit bands instead of continuous trading around zero.
-- Martin: include proportional-cost no-trade logic and compare against no-trade.
-- Gueant, Lehalle, Fernandez-Tapia; Ghoshal and Roberts: account for inventory, turnover, spread costs, and adverse-selection-style execution friction.
-- Almgren: use time-varying liquidity costs rather than a constant fee.
-- Dare: use a train/test statistical-arbitrage workflow.
+Best validation-selected test rows:
 
-Microprice is used only as a fair-value signal.  Executable gross P&L is computed from midpoint residual returns, with bid-ask costs charged separately.  Candidate selection and threshold choice use January-February 2026; March 2026 is the out-of-sample test.
+| pair     | stock   | spread_type               |   entry_z |   exit_z |   clipped_last_trade_proxy |   half_spread_taker_cost |   no_cost_midpoint |   quarter_spread_cost |
+|:---------|:--------|:--------------------------|----------:|---------:|---------------------------:|-------------------------:|-------------------:|----------------------:|
+| XLK-AAPL | AAPL    | price_regression_residual |      1    |     0.5  |                  1315.4    |               -207.309   |         5859.32    |            2826       |
+| XLK-PLTR | PLTR    | price_regression_residual |      1    |     0.5  |                  1486.05   |                914.8     |         1573.04    |            1243.92    |
+| XLK-ORCL | ORCL    | price_regression_residual |      1    |     0    |                  1313.93   |                238.995   |         1479.5     |             859.249   |
+| XLK-AMD  | AMD     | direct_log_price          |      1.25 |     0.5  |                   493.447  |                204.427   |          491.958   |             348.192   |
+| XLK-NVDA | NVDA    | direct_log_price          |      1    |     0.5  |                   323.044  |                -46.385   |          378.028   |             165.821   |
+| XLK-INTC | INTC    | direct_log_price          |      2.5  |     0.5  |                   193.276  |                124.19    |          190.189   |             157.19    |
+| XLK-AAPL | AAPL    | cum_residual_return       |      2    |     0    |                   145.249  |                  7.06338 |          188.046   |              97.5548  |
+| XLK-AVGO | AVGO    | cum_residual_return       |      2    |     0    |                   136.907  |                -74.638   |          139.822   |              32.5919  |
+| XLK-IBM  | IBM     | price_regression_residual |      1.25 |     0.5  |                   454.779  |              -1043.17    |         1088.77    |              22.8018  |
+| XLK-MSFT | MSFT    | direct_log_price          |      1    |     0.5  |                   137.459  |               -165.737   |          172.7     |               3.48151 |
+| XLK-PLTR | PLTR    | cum_residual_return       |      2    |     0.5  |                   -66.2818 |               -170.165   |           -9.75177 |             -89.9582  |
+| XLK-ANET | ANET    | direct_log_price          |      1.25 |     0.5  |                    53.2793 |               -295.331   |           23.5716  |            -135.88    |
+| XLK-QCOM | QCOM    | cum_residual_return       |      2.5  |     0    |                  -151.142  |               -219.539   |         -105.304   |            -162.421   |
+| XLK-MU   | MU      | direct_log_price          |      2    |     0    |                   -89.5637 |               -253.107   |          -92.6669  |            -172.887   |
+| XLK-ANET | ANET    | price_regression_residual |      1    |     0.25 |                   -42.9458 |               -315.689   |          -65.2297  |            -190.459   |
 
-## Sparse Candidate Ranking
+OU and stationarity diagnostics:
 
-| subset                  | betas                                                      |   train_adf_p |   train_half_life_minutes |   train_avg_oneway_cost_bps |    score |
-|:------------------------|:-----------------------------------------------------------|--------------:|--------------------------:|----------------------------:|---------:|
-| MSFT NVDA ORCL CRM AMD  | MSFT:0.0797 NVDA:0.2257 ORCL:0.0745 CRM:0.0602 AMD:0.1074  |     0.0149172 |                   187.77  |                     4.45279 | 0.197858 |
-| NVDA ORCL CRM AMD       | NVDA:0.2331 ORCL:0.0795 CRM:0.0657 AMD:0.1105              |     0.0220765 |                   225.312 |                     4.10373 | 0.216807 |
-| NVDA AVGO ORCL CRM AMD  | NVDA:0.2092 AVGO:0.0954 ORCL:0.0703 CRM:0.0638 AMD:0.0975  |     0.0294932 |                   196.379 |                     4.63133 | 0.220309 |
-| MSFT NVDA AVGO ORCL AMD | MSFT:0.0794 NVDA:0.2076 AVGO:0.0929 ORCL:0.0715 AMD:0.0974 |     0.0471017 |                   198.326 |                     4.5497  | 0.237259 |
-| NVDA AVGO ORCL AMD      | NVDA:0.2145 AVGO:0.0966 ORCL:0.0766 AMD:0.1002             |     0.0565331 |                   233.876 |                     4.1845  | 0.257161 |
-| AAPL NVDA ORCL CRM AMD  | AAPL:0.0878 NVDA:0.2260 ORCL:0.0778 CRM:0.0643 AMD:0.1066  |     0.0422305 |                   258.482 |                     4.4505  | 0.260482 |
-| MSFT NVDA ORCL AMD      | MSFT:0.0852 NVDA:0.2305 ORCL:0.0803 AMD:0.1099             |     0.0675366 |                   257.805 |                     4.05107 | 0.27746  |
-| NVDA ORCL AMD           | NVDA:0.2389 ORCL:0.0862 AMD:0.1134                         |     0.0655512 |                   286.128 |                     3.63619 | 0.281339 |
+| pair     | spread_type               |   train_adf_p |   train_half_life_minutes |   ou_half_life_minutes |   train_spread_std_bps |
+|:---------|:--------------------------|--------------:|--------------------------:|-----------------------:|-----------------------:|
+| XLK-PLTR | cum_residual_return       |     0.0727941 |                   743.715 |                743.715 |                125.889 |
+| XLK-ADI  | price_regression_residual |     0.183559  |                  1411.77  |               1411.77  |               1786.19  |
+| XLK-AMAT | price_regression_residual |     0.280575  |                  1966.99  |               1966.99  |               2280.61  |
+| XLK-KLAC | price_regression_residual |     0.295024  |                  2271.6   |               2271.6   |               2553.16  |
+| XLK-ORCL | price_regression_residual |     0.299342  |                  1701.79  |               1701.79  |               2342.49  |
+| XLK-QCOM | cum_residual_return       |     0.30401   |                  1107.76  |               1107.76  |                154.367 |
+| XLK-LRCX | price_regression_residual |     0.337211  |                  2534.63  |               2534.63  |               2466.68  |
+| XLK-INTC | price_regression_residual |     0.365442  |                  3068.26  |               3068.26  |               2952.96  |
+| XLK-AMD  | cum_residual_return       |     0.388407  |                  1045.44  |               1045.44  |                141.731 |
+| XLK-TXN  | price_regression_residual |     0.391854  |                  1802.21  |               1802.21  |               2077.66  |
+| XLK-AAPL | price_regression_residual |     0.3945    |                  2669.06  |               2669.06  |               2983.16  |
+| XLK-MU   | price_regression_residual |     0.401959  |                  2742.15  |               2742.15  |               2490.78  |
+| XLK-MSFT | price_regression_residual |     0.425732  |                  1532.98  |               1532.98  |               2690.71  |
+| XLK-APH  | price_regression_residual |     0.469717  |                  3924.34  |               3924.34  |               3227.03  |
+| XLK-INTC | cum_residual_return       |     0.484839  |                  1744.2   |               1744.2   |                170.465 |
 
-## Final Backtest
+## Sparse Market-Neutral Basket
 
-| strategy             | sample   |   trades |   avg_abs_position |   gross_bps |   cost_bps |   net_bps |   sharpe_minute_ann |   max_drawdown_bps |
-|:---------------------|:---------|---------:|-------------------:|------------:|-----------:|----------:|--------------------:|-------------------:|
-| sparse_e3.5_x1_plain | test     |        2 |          0.044489  |    -82.0832 |    6.94978 |  -89.033  |            -3.24726 |          -122.912  |
-| sparse_e3.5_x1_plain | train    |        6 |          0.0489195 |    117.726  |   30.7967  |   86.9296 |             1.3562  |           -80.4235 |
-| literature_no_trade  | test     |        0 |          0         |      0      |    0       |    0      |           nan       |             0      |
-| literature_no_trade  | train    |        0 |          0         |      0      |    0       |    0      |           nan       |             0      |
+| subset                  |   k | betas                                                      |   train_adf_p |   train_half_life_minutes |   train_avg_oneway_cost_bps |    score |
+|:------------------------|----:|:-----------------------------------------------------------|--------------:|--------------------------:|----------------------------:|---------:|
+| NVDA AMD PLTR LRCX AMAT |   5 | NVDA:0.1930 AMD:0.0807 PLTR:0.1040 LRCX:0.0792 AMAT:0.0560 |     0.0265127 |                   343.717 |                     4.90411 | 0.296453 |
+| NVDA MSFT AMD PLTR AMAT |   5 | NVDA:0.2003 MSFT:0.0636 AMD:0.0864 PLTR:0.1069 AMAT:0.0709 |     0.0274649 |                   355.18  |                     4.80604 | 0.301176 |
+| NVDA AMD PLTR AMAT      |   4 | NVDA:0.2057 AMD:0.0888 PLTR:0.1112 AMAT:0.0724             |     0.0282008 |                   378.25  |                     4.48796 | 0.307085 |
+| NVDA AMD PLTR AMAT ORCL |   5 | NVDA:0.1941 AMD:0.0833 PLTR:0.1037 AMAT:0.0689 ORCL:0.0624 |     0.0399209 |                   379.603 |                     4.73226 | 0.324367 |
+| NVDA MSFT AMD PLTR LRCX |   5 | NVDA:0.1953 MSFT:0.0628 AMD:0.0823 PLTR:0.1028 LRCX:0.0894 |     0.0477607 |                   370.045 |                     4.63664 | 0.325516 |
+| NVDA AVGO AMD PLTR AMAT |   5 | NVDA:0.1881 AVGO:0.0770 AMD:0.0806 PLTR:0.1032 AMAT:0.0641 |     0.0502912 |                   365.295 |                     4.8078  | 0.329095 |
+| NVDA AAPL AMD PLTR AMAT |   5 | NVDA:0.2005 AAPL:0.0788 AMD:0.0864 PLTR:0.1075 AMAT:0.0701 |     0.0449295 |                   384.721 |                     4.73145 | 0.331919 |
+| NVDA AAPL AMD PLTR LRCX |   5 | NVDA:0.1955 AAPL:0.0782 AMD:0.0823 PLTR:0.1033 LRCX:0.0887 |     0.0562212 |                   379.894 |                     4.56845 | 0.337537 |
+| NVDA AMD PLTR LRCX      |   4 | NVDA:0.2006 AMD:0.0846 PLTR:0.1069 LRCX:0.0910             |     0.0478761 |                   407.108 |                     4.31669 | 0.337764 |
+| AAPL AMD PLTR AMAT ORCL |   5 | AAPL:0.0884 AMD:0.1095 PLTR:0.1302 AMAT:0.0865 ORCL:0.0772 |     0.0340087 |                   401.914 |                     5.2289  | 0.339543 |
 
-## Bid/Ask Execution Accounting Audit
+| strategy             | sample   |   trades |   gross_bps |   cost_bps |   net_bps |   max_drawdown_bps |
+|:---------------------|:---------|---------:|------------:|-----------:|----------:|-------------------:|
+| sparse_e3.5_x0_plain | test     |        4 |    -24.3074 |    15.2564 |  -39.5638 |           -70.5221 |
+| sparse_e3.5_x0_plain | train    |        6 |    102.006  |    31.0504 |   70.9561 |           -94.6965 |
+| literature_no_trade  | test     |        0 |      0      |     0      |    0      |             0      |
+| literature_no_trade  | train    |        0 |      0      |     0      |    0      |             0      |
 
-The execution audit keeps each strategy's selected position path fixed, computes midpoint gross P&L over the same holding window, and subtracts explicit bid/ask boundary costs at position changes.  This is a minute-level top-of-book audit, not a depth-, queue-, latency-, borrow-, or market-impact-aware simulator.
+Bid/ask boundary audit:
 
 | sample   |   old_gross_bps |   old_cost_bps |   old_net_bps |   new_gross_bps |   new_bidask_cost_bps |   new_bidask_net_bps |   turnover |
 |:---------|----------------:|---------------:|--------------:|----------------:|----------------------:|---------------------:|-----------:|
-| test     |        -82.0832 |        6.94978 |      -89.033  |        -82.0832 |               33.1588 |            -115.242  |          2 |
-| train    |        117.726  |       30.7967  |       86.9296 |        117.726  |              158.464  |             -40.7373 |          6 |
+| test     |        -24.3074 |        15.2564 |      -39.5638 |        -24.3074 |               101.139 |            -125.446  |          4 |
+| train    |        102.006  |        31.0504 |       70.9561 |        102.006  |               128.142 |             -26.1359 |          6 |
 
-The old pair-trading diagnostic is also re-audited under the same accounting.  The XLK-ORCL March result is not a robust positive alpha after costs: midpoint gross P&L is positive, but bid/ask boundary costs exceed it.
+## Robust Alpha Suite
 
-| pair     |   validation_net_bps |   test_gross_bps |   test_cost_bps |   test_net_bps |   test_trades |
-|:---------|---------------------:|-----------------:|----------------:|---------------:|--------------:|
-| XLK-ORCL |              264.184 |          509.66  |         734.756 |       -225.095 |            17 |
-| XLK-MSFT |              234.674 |          415.199 |         648.192 |       -232.994 |            17 |
-| XLK-AAPL |              279.655 |          358.664 |         667.117 |       -308.453 |            14 |
-| XLK-CRM  |              235.937 |          318.011 |         633.141 |       -315.13  |            14 |
-| XLK-AVGO |              104.117 |          753.636 |        1153.16  |       -399.52  |            19 |
-| XLK-NVDA |              337.879 |         1303.73  |        1787.47  |       -483.733 |            32 |
-| XLK-AMD  |              266.841 |          908.588 |        1453.11  |       -544.524 |            31 |
-| XLK-CSCO |              220.434 |          844.951 |        1485.58  |       -640.634 |            38 |
+The robust alpha suite jointly tests XLK-only timing and partial/full hedge rules.  If the selected rule has `hedge_fraction = 0`, it is a timing strategy, not market-neutral arbitrage.
 
-## Positive Timing Extension
+| decision    | selected_strategy                                                                  | reason                               |   train_net_bps |   test_net_bps |   benchmark_no_trade_train_bps |   benchmark_no_trade_test_bps | economic_label   |
+|:------------|:-----------------------------------------------------------------------------------|:-------------------------------------|----------------:|---------------:|-------------------------------:|------------------------------:|:-----------------|
+| active_rule | xlk_only_timing_mid_ridge_pos_k3_zscore_mean_e3_x0.5_h0_contra_nogate_cw1950_mh180 | passed train-only robustness filters |         472.546 |       -17.7254 |                              0 |                             0 | XLK-only timing  |
 
-The positive extension follows a different economic claim.  The basket is no longer traded as a hedge.  Instead, the sparse basket supplies a microprice fair-value premium signal for trading XLK only:
+Controls:
 
-- signal basket: `MSFT NVDA ORCL CRM AMD`;
-- signal: microprice premium minus five-day rolling premium mean;
-- traded instrument: XLK only;
-- entry: premium above/below 50 bps;
-- exit: premium reverts inside 25 bps;
-- max hold: intraday.
-
-| period   |   gross_bps |   cost_bps |   net_bps |   trades |   avg_abs_position |   long_gross_bps |   short_gross_bps |   xlk_buyhold_bps |
-|:---------|------------:|-----------:|----------:|---------:|-------------------:|-----------------:|------------------:|------------------:|
-| jan      |     287.185 |    142.26  |   144.925 |       44 |           0.687983 |         -127.266 |           414.451 |          -345.091 |
-| feb      |     402.055 |    137.45  |   264.605 |       50 |           0.73375  |          139.978 |           262.076 |          -204.096 |
-| mar      |     870.743 |    232.39  |   638.353 |       58 |           0.757126 |          550.871 |           319.872 |          -370.728 |
-| all      |    1559.98  |    512.099 |  1047.88  |      152 |           0.727119 |          563.583 |           996.4   |          -919.915 |
-
-Bid/ask boundary-cost audit for the same XLK timing path:
-
-| sample   |   old_gross_bps |   old_cost_bps |   old_net_bps |   new_gross_bps |   new_bidask_cost_bps |   new_bidask_net_bps |   turnover |
-|:---------|----------------:|---------------:|--------------:|----------------:|----------------------:|---------------------:|-----------:|
-| feb      |         402.055 |         137.45 |       264.605 |         402.055 |               137.453 |              264.601 |         50 |
-| jan      |         287.185 |         142.26 |       144.925 |         287.185 |               142.293 |              144.892 |         44 |
-| mar      |         870.743 |         232.39 |       638.353 |         870.743 |               232.321 |              638.422 |         58 |
-
-Controls show that the result is not explained by simple long exposure or by flipping the signal:
-
-| control                     |   train_net_bps |   mar_net_bps |   avg_pos_mar |
-|:----------------------------|----------------:|--------------:|--------------:|
-| selected                    |         409.531 |     638.353   |      0.28881  |
-| sign_flip                   |        -968.949 |   -1103.13    |     -0.28881  |
-| active_always_long          |        -943.525 |      -1.39127 |      0.757126 |
-| active_always_short         |         384.107 |    -463.389   |     -0.757126 |
-| circular_shift_mean         |         nan     |    -440.23    |    nan        |
-| circular_shift_p95          |         nan     |     447.052   |    nan        |
-| selected_vs_circular_pvalue |         nan     |       0.0175  |    nan        |
+| control                     |   train_net_bps |   test_net_bps |   test_trades |   test_avg_abs_position |
+|:----------------------------|----------------:|---------------:|--------------:|------------------------:|
+| selected                    |         472.546 |     -17.7254   |            10 |               0.0336719 |
+| sign_flip                   |        -484.459 |     -23.4718   |            10 |               0.0336719 |
+| active_always_long          |         312.151 |     -11.4609   |            10 |               0.0336719 |
+| active_always_short         |        -324.064 |     -29.7363   |            10 |               0.0336719 |
+| circular_shift_mean         |         nan     |     -61.6979   |           nan |             nan         |
+| circular_shift_p95          |         nan     |      42.7593   |           nan |             nan         |
+| selected_vs_circular_pvalue |         nan     |       0.243902 |           nan |             nan         |
 
 Cost sensitivity:
 
-|   cost_multiplier |       all |      feb |        jan |     mar |
-|------------------:|----------:|---------:|-----------:|--------:|
-|               1   | 1047.88   |  264.605 |  144.925   | 638.353 |
-|               1.5 |  791.834  |  195.88  |   73.7957  | 522.158 |
-|               2   |  535.784  |  127.156 |    2.66595 | 405.962 |
-|               3   |   23.6846 |  -10.294 | -139.594   | 173.572 |
-|               4   | -488.415  | -147.744 | -281.853   | -58.818 |
+|   cost_multiplier | sample   |   gross_bps |   cost_bps |   net_bps |
+|------------------:|:---------|------------:|-----------:|----------:|
+|               1   | train    |   478.502   |    5.95631 |  472.546  |
+|               1   | test     |     2.87321 |   20.5986  |  -17.7254 |
+|               1.5 | train    |   478.502   |    8.93446 |  469.568  |
+|               1.5 | test     |     2.87321 |   30.8979  |  -28.0247 |
+|               2   | train    |   478.502   |   11.9126  |  466.59   |
+|               2   | test     |     2.87321 |   41.1972  |  -38.324  |
+|               3   | train    |   478.502   |   17.8689  |  460.633  |
+|               3   | test     |     2.87321 |   61.7958  |  -58.9226 |
+|               4   | train    |   478.502   |   23.8252  |  454.677  |
+|               4   | test     |     2.87321 |   82.3944  |  -79.5212 |
 
-## Timing Robustness Grid
+## XLK-Only Timing Extension
 
-To avoid turning the March-positive 50/25 bps timing rule into a parameter story, I added a separate robustness grid over microprice shrinkage, rolling-center horizon, entry/exit bands, and max holding time.  The selection rule is deliberately conservative: first choose a stable January-February parameter island, then choose the best rule inside that island; March is evaluated only after selection.
+| period     |   gross_bps |   cost_bps |   net_bps |   trades |   avg_abs_position |   xlk_buyhold_bps |
+|:-----------|------------:|-----------:|----------:|---------:|-------------------:|------------------:|
+| train      |    -125.87  |    557.201 |  -683.072 |      120 |           0.742022 |         -676.907  |
+| validation |     407.969 |    202.23  |   205.739 |       46 |           0.902025 |         -309.429  |
+| test       |    -550.251 |    302.178 |  -852.429 |       99 |           0.806039 |          969.964  |
+| all        |    -268.152 |   1061.61  | -1329.76  |      265 |           0.789119 |          -16.3728 |
 
-| decision          | reason                                                    | selected_strategy                    |   train_net_bps |   mar_net_bps |   all_net_bps |   train_trades |   mar_trades |
-|:------------------|:----------------------------------------------------------|:-------------------------------------|----------------:|--------------:|--------------:|---------------:|-------------:|
-| active_xlk_timing | Selected by Jan-Feb stability island first; March is OOS. | micro_shrink_0.75_cw10d_e60_x0_mh240 |          1025.8 |        120.05 |       1145.85 |            116 |           75 |
+Bid/ask boundary audit:
 
-Top train-selected parameter islands:
-
-| signal_view       |   center_days |   entry_bps |   valid_rules |   median_train_net_bps |   p25_train_net_bps |   median_mar_net_bps |   positive_march_rate |
-|:------------------|--------------:|------------:|--------------:|-----------------------:|--------------------:|---------------------:|----------------------:|
-| micro_shrink_0.75 |            10 |          60 |             5 |                731.365 |             604.599 |            71.2328   |              0.888889 |
-| micro_shrink_0.50 |            10 |          60 |             6 |                606.186 |             508.566 |            62.0572   |              0.777778 |
-| micro_shrink_0.25 |            10 |          60 |             6 |                574.601 |             505.285 |           120.05     |              0.777778 |
-| micro             |            10 |          30 |             1 |               1097.22  |             912.275 |            -0.912862 |              0.444444 |
-| micro             |            10 |          60 |             5 |                652.846 |             567.901 |            75.7209   |              0.888889 |
-| micro_shrink_0.50 |            10 |          30 |             1 |               1039.24  |             920.008 |            77.4385   |              0.666667 |
-| mid               |            10 |          60 |             6 |                512.196 |             442.88  |           131.379    |              0.777778 |
-| micro_shrink_0.25 |            10 |          30 |             1 |               1015.26  |             903.139 |            77.4677   |              0.666667 |
-
-## Model Comparison
-
-| model                               | selection_rule                                    |   train_net_bps |   march_net_bps |   full_net_bps | verdict                                                                |
-|:------------------------------------|:--------------------------------------------------|----------------:|----------------:|---------------:|:-----------------------------------------------------------------------|
-| baseline_original_best              | best full-sample diagnostic only                  |        nan      |        nan      |     -579.651   | invalid as tradable positive result; diagnostic failure                |
-| v2_best_by_train_overall            | max Jan-Feb net among v2 grid                     |        -48.1997 |        -47.6356 |      -95.8354  | methodologically better signals, but no train-positive active strategy |
-| v2_best_march_diagnostic            | best March net, not allowed for ex-ante selection |       -118.168  |         54.0767 |      -64.0912  | useful diagnostic; not an honest selected strategy                     |
-| hybrid_sparse_micro_signal_mid_exec | sparse portfolio + threshold selected on Jan-Feb  |         86.9296 |        -89.033  |       -2.10341 | train-positive, fails OOS; no-trade dominates in March                 |
-| literature_no_trade                 | transaction-cost no-trade benchmark               |          0      |          0      |        0       | best honest March result among ex-ante choices                         |
-
-## Selection Audit
-
-The `v2_best_march_diagnostic` row is not selected because it sorts the grid by March P&L after observing March.  March is the test set, so choosing that row is selection-on-test / look-ahead bias.  It remains useful as a post-mortem diagnostic, but it cannot be reported as an honest tradable strategy.
-
-| model                               | selection_protocol                                                               |   train_net_bps |   march_net_bps | bias_flag                          | final_use                                                                  |
-|:------------------------------------|:---------------------------------------------------------------------------------|----------------:|----------------:|:-----------------------------------|:---------------------------------------------------------------------------|
-| v2_best_by_train_overall            | Valid ex-ante selection: choose from grid using Jan-Feb only, then report March. |        -48.1997 |        -47.6356 | No test leakage.                   | No, active rule loses in train and March; useful as diagnostic benchmark.  |
-| v2_best_march_diagnostic            | Invalid as final strategy: choose after sorting by March net P&L.                |       -118.168  |         54.0767 | Selection-on-test/look-ahead bias. | No, because March is the test set. Keep only as post-mortem diagnostic.    |
-| hybrid_sparse_micro_signal_mid_exec | Valid ex-ante selection: sparse basket and threshold selected on Jan-Feb.        |         86.9296 |        -89.033  | No test leakage in selection.      | Yes as the final active experiment, but it fails OOS; compare to no-trade. |
-| literature_no_trade                 | Benchmark implied by transaction-cost/no-trade literature.                       |          0      |          0      | None.                              | Yes as the final decision benchmark; dominates active rules in March.      |
+| sample     |   old_gross_bps |   old_cost_bps |   old_net_bps |   new_gross_bps |   new_bidask_cost_bps |   new_bidask_net_bps |   turnover |
+|:-----------|----------------:|---------------:|--------------:|----------------:|----------------------:|---------------------:|-----------:|
+| test       |        -550.251 |        302.178 |      -852.429 |        -550.251 |               302.087 |             -852.338 |         99 |
+| train      |        -125.87  |        557.201 |      -683.072 |        -125.87  |               607.417 |             -733.287 |        120 |
+| validation |         407.969 |        202.23  |       205.739 |         407.969 |               202.205 |              205.763 |         46 |
 
 ## Interpretation
 
-The initial holdings-weight basket result was not a tradable positive result: it lost before costs and then lost more after costs.  The v2 diagnostic improved methodology by treating microprice as signal-only and using rolling residual signals, but strict January-February selection did not find a train-positive active strategy.  The final hybrid sparse specification looked mildly positive under the old half-spread approximation, but the exact bid/ask boundary-cost audit turns it negative in both train and March test.
+The next report should avoid saying "ETF arbitrage is profitable" unless a market-neutral rule survives the new spread-construction and execution-cost checks.  The defensible framing is:
 
-The most defensible conclusion is therefore two-part: **the proposed market-neutral ETF-basket arbitrage fails under this incomplete-basket implementation, but the same sparse-basket microprice premium can be repurposed into a profitable XLK-only timing signal in this sample.**
+> Market-neutral XLK-vs-basket arbitrage is fragile under realistic TAQ execution assumptions.  The more promising direction is to use the sparse/top-holdings basket as a fair-value signal and trade XLK only, but the first new-data quick run does not yet prove a stable positive active strategy.  Report gross/no-cost, 0.25-spread, 0.50-spread, and last-trade proxy economics separately.
+
+## Next Steps
+
+1. Finish the full-grid alpha suite after verifying quick-run results.
+2. Add passive maker/taker fill probabilities instead of fixed spread fractions.
+3. Extend OU/s-score trading from diagnostics into rule selection.
+4. Add dynamic hedge beta, likely Kalman-filter or rolling regression.
+5. Add portfolio-level drawdown / VaR constraints for correlated constituent losses.
 
 ## Reproducibility
 
 ```bash
-python3 scripts/build_dataset.py
-python3 scripts/run_final_analysis.py
-python3 scripts/run_sparse_bidask_execution.py
-python3 scripts/run_timing_extension.py
-python3 scripts/run_timing_bidask_execution.py
-python3 scripts/run_timing_robustness.py
-python3 scripts/run_old_data_method_upgrade.py
-python3 scripts/run_old_data_execution_audit_fixed.py
-python3 scripts/make_report.py
+python3 scripts/build_dataset.py --force
+python3 scripts/run_newdata_pipeline.py --quick
 ```

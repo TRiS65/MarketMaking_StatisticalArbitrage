@@ -10,7 +10,7 @@ WRDS universe arrives:
 * Pair trading for XLK versus each original constituent.
 * Entry/exit z-score heatmaps with max-holding exits.
 * Trade-level logs and validation-selected test evaluation.
-* Actual bid/ask entry and exit fills from NBBO quotes.
+* Bid/ask-aware execution approximation from NBBO quotes.
 * Data, strategy, and selection-audit tables.
 """
 
@@ -342,106 +342,6 @@ def run_z_strategy(
     return frame, trades
 
 
-def filled_spread_value(
-    bid: pd.DataFrame,
-    ask: pd.DataFrame,
-    mid: pd.DataFrame,
-    stock: str,
-    beta: float,
-    timestamp: pd.Timestamp,
-    side: str,
-) -> float:
-    """Log spread value for an actual executable residual fill.
-
-    side is one of:
-    * long_entry:  buy XLK at ask, short stock at bid
-    * long_exit:   sell XLK at bid, cover stock at ask
-    * short_entry: short XLK at bid, buy stock at ask
-    * short_exit:  cover XLK at ask, sell stock at bid
-    * mid:         midpoint mark of log(XLK) - beta log(stock)
-    """
-    if side == "long_entry":
-        xlk_px = ask.at[timestamp, ETF]
-        stock_px = bid.at[timestamp, stock]
-    elif side == "long_exit":
-        xlk_px = bid.at[timestamp, ETF]
-        stock_px = ask.at[timestamp, stock]
-    elif side == "short_entry":
-        xlk_px = bid.at[timestamp, ETF]
-        stock_px = ask.at[timestamp, stock]
-    elif side == "short_exit":
-        xlk_px = ask.at[timestamp, ETF]
-        stock_px = bid.at[timestamp, stock]
-    elif side == "mid":
-        xlk_px = mid.at[timestamp, ETF]
-        stock_px = mid.at[timestamp, stock]
-    else:
-        raise ValueError(f"Unknown fill side: {side}")
-    if not np.isfinite(xlk_px) or not np.isfinite(stock_px) or xlk_px <= 0 or stock_px <= 0:
-        return np.nan
-    return float(np.log(xlk_px) - beta * np.log(stock_px))
-
-
-def apply_actual_bidask_execution(
-    frame: pd.DataFrame,
-    trades: pd.DataFrame,
-    bid: pd.DataFrame,
-    ask: pd.DataFrame,
-    mid: pd.DataFrame,
-    stock: str,
-    beta: float,
-) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Replace summary P&L with explicit ask/bid fills at trade boundaries."""
-    actual_frame = frame.copy()
-    actual_frame["midpoint_gross_ret"] = actual_frame["gross_ret"]
-    actual_frame["halfspread_cost_ret"] = actual_frame["cost_ret"]
-    actual_frame["gross_ret"] = 0.0
-    actual_frame["cost_ret"] = 0.0
-    actual_frame["net_ret"] = 0.0
-    if trades.empty:
-        actual_frame["cum_net_bps"] = 0.0
-        return actual_frame, trades
-
-    actual_trades = trades.copy()
-    actual_trades["midpoint_gross_bps"] = np.nan
-    actual_trades["actual_bidask_net_bps"] = np.nan
-    actual_trades["actual_execution_cost_bps"] = np.nan
-
-    for idx, trade in actual_trades.iterrows():
-        entry_time = pd.Timestamp(trade["entry_time"])
-        exit_time = pd.Timestamp(trade["exit_time"])
-        mid_entry = filled_spread_value(bid, ask, mid, stock, beta, entry_time, "mid")
-        mid_exit = filled_spread_value(bid, ask, mid, stock, beta, exit_time, "mid")
-        if trade["direction"] == "long_residual":
-            actual_entry = filled_spread_value(bid, ask, mid, stock, beta, entry_time, "long_entry")
-            actual_exit = filled_spread_value(bid, ask, mid, stock, beta, exit_time, "long_exit")
-            midpoint_gross_bps = 1e4 * (mid_exit - mid_entry)
-            actual_net_bps = 1e4 * (actual_exit - actual_entry)
-        else:
-            actual_entry = filled_spread_value(bid, ask, mid, stock, beta, entry_time, "short_entry")
-            actual_exit = filled_spread_value(bid, ask, mid, stock, beta, exit_time, "short_exit")
-            midpoint_gross_bps = 1e4 * (mid_entry - mid_exit)
-            actual_net_bps = 1e4 * (actual_entry - actual_exit)
-
-        if not np.isfinite(actual_net_bps) or not np.isfinite(midpoint_gross_bps):
-            continue
-        cost_bps = midpoint_gross_bps - actual_net_bps
-        actual_trades.loc[idx, "midpoint_gross_bps"] = midpoint_gross_bps
-        actual_trades.loc[idx, "actual_bidask_net_bps"] = actual_net_bps
-        actual_trades.loc[idx, "actual_execution_cost_bps"] = cost_bps
-        actual_trades.loc[idx, "gross_bps"] = midpoint_gross_bps
-        actual_trades.loc[idx, "cost_bps"] = cost_bps
-        actual_trades.loc[idx, "net_bps"] = actual_net_bps
-
-        if exit_time in actual_frame.index:
-            actual_frame.at[exit_time, "gross_ret"] += midpoint_gross_bps / 1e4
-            actual_frame.at[exit_time, "cost_ret"] += cost_bps / 1e4
-            actual_frame.at[exit_time, "net_ret"] += actual_net_bps / 1e4
-
-    actual_frame["cum_net_bps"] = 1e4 * actual_frame["net_ret"].cumsum()
-    return actual_frame, actual_trades
-
-
 def max_drawdown_bps(net_ret: pd.Series) -> float:
     pnl = 1e4 * net_ret.cumsum()
     return float((pnl - pnl.cummax()).min()) if len(pnl) else 0.0
@@ -473,15 +373,11 @@ def summarize_sample(frame: pd.DataFrame, trades: pd.DataFrame, sample: str) -> 
 def run_grid(
     pair: PairSpec,
     ret: pd.DataFrame,
-    bid: pd.DataFrame,
-    ask: pd.DataFrame,
-    mid: pd.DataFrame,
     spread_bps: pd.DataFrame,
     center_window: int,
     entry_grid: list[float],
     exit_grid: list[float],
     max_holding_grid: list[int | None],
-    stop_z_grid: list[float | None] | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame, dict[tuple[float, float, int], pd.DataFrame]]:
     res = residual_ret(ret, pair.stock, pair.beta)
     spread = res.cumsum()
@@ -490,42 +386,32 @@ def run_grid(
     rows = []
     all_trades = []
     selected_frames: dict[tuple[float, float, int], pd.DataFrame] = {}
-    stop_z_grid = [None] if stop_z_grid is None else stop_z_grid
     for entry_z in entry_grid:
         for exit_z in exit_grid:
             if exit_z >= entry_z:
                 continue
             for max_hold in max_holding_grid:
-                for stop_z in stop_z_grid:
-                    if stop_z is not None and stop_z <= entry_z:
-                        continue
-                    frame, trades = run_z_strategy(z, res, cost, entry_z, exit_z, max_hold, stop_z=stop_z)
-                    frame, trades = apply_actual_bidask_execution(frame, trades, bid, ask, mid, pair.stock, pair.beta)
-                    hold_key = -1 if max_hold is None else int(max_hold)
-                    stop_key = -1.0 if stop_z is None else float(stop_z)
-                    for sample in ["train", "validation", "test"]:
-                        rec = {
-                            "pair": pair.pair,
-                            "stock": pair.stock,
-                            "beta": pair.beta,
-                            "entry_z": entry_z,
-                            "exit_z": exit_z,
-                            "max_holding_minutes": hold_key,
-                            "stop_z": stop_key,
-                            "execution_model": "actual_bidask_fills",
-                            "sample": sample,
-                        }
-                        rec.update(summarize_sample(frame, trades, sample))
-                        rows.append(rec)
-                    if not trades.empty:
-                        t = trades.copy()
-                        t.insert(0, "pair", pair.pair)
-                        t.insert(1, "stock", pair.stock)
-                        t.insert(2, "beta", pair.beta)
-                        t["execution_model"] = "actual_bidask_fills"
-                        all_trades.append(t)
-                    if stop_z is None:
-                        selected_frames[(entry_z, exit_z, hold_key)] = frame
+                frame, trades = run_z_strategy(z, res, cost, entry_z, exit_z, max_hold)
+                hold_key = -1 if max_hold is None else int(max_hold)
+                for sample in ["train", "validation", "test"]:
+                    rec = {
+                        "pair": pair.pair,
+                        "stock": pair.stock,
+                        "beta": pair.beta,
+                        "entry_z": entry_z,
+                        "exit_z": exit_z,
+                        "max_holding_minutes": hold_key,
+                        "sample": sample,
+                    }
+                    rec.update(summarize_sample(frame, trades, sample))
+                    rows.append(rec)
+                if not trades.empty:
+                    t = trades.copy()
+                    t.insert(0, "pair", pair.pair)
+                    t.insert(1, "stock", pair.stock)
+                    t.insert(2, "beta", pair.beta)
+                    all_trades.append(t)
+                selected_frames[(entry_z, exit_z, hold_key)] = frame
     grid = pd.DataFrame(rows)
     trades_out = pd.concat(all_trades, ignore_index=True) if all_trades else pd.DataFrame()
     return grid, trades_out, selected_frames
@@ -655,17 +541,7 @@ def plot_drawdown(frame: pd.DataFrame, output: Path) -> None:
     plt.close(fig)
 
 
-def execution_comparison(
-    best: pd.Series,
-    ret: pd.DataFrame,
-    bid: pd.DataFrame,
-    ask: pd.DataFrame,
-    mid: pd.DataFrame,
-    spread_bps: pd.DataFrame,
-    center_window: int,
-    figures: Path,
-    tables: Path,
-) -> None:
+def execution_comparison(best: pd.Series, ret: pd.DataFrame, spread_bps: pd.DataFrame, center_window: int, figures: Path, tables: Path) -> None:
     stock = str(best["stock"])
     beta = float(best["beta"])
     entry_z = float(best["entry_z"])
@@ -675,11 +551,9 @@ def execution_comparison(
     z = rolling_zscore(res.cumsum(), center_window)
     cost = one_way_cost_ret(spread_bps, stock, beta)
     mid_frame, _ = run_z_strategy(z, res, cost, entry_z, exit_z, hold, cost_multiplier=0.0)
-    approx_frame, _ = run_z_strategy(z, res, cost, entry_z, exit_z, hold, cost_multiplier=1.0)
-    bidask_frame, bidask_trades = run_z_strategy(z, res, cost, entry_z, exit_z, hold, cost_multiplier=0.0)
-    bidask_frame, bidask_trades = apply_actual_bidask_execution(bidask_frame, bidask_trades, bid, ask, mid, stock, beta)
+    bidask_frame, _ = run_z_strategy(z, res, cost, entry_z, exit_z, hold, cost_multiplier=1.0)
     rows = []
-    for label, frame in [("midpoint_no_cost", mid_frame), ("halfspread_cost_approx", approx_frame), ("actual_bidask_fills", bidask_frame)]:
+    for label, frame in [("midpoint_no_cost", mid_frame), ("bidask_aware", bidask_frame)]:
         for sample in ["validation", "test"]:
             part = frame[frame["sample"] == sample]
             rows.append(
@@ -697,8 +571,7 @@ def execution_comparison(
 
     fig, ax = plt.subplots(figsize=(10, 4.8))
     ax.plot(mid_frame.index, mid_frame["cum_net_bps"], label="midpoint no cost", linewidth=1.0)
-    ax.plot(approx_frame.index, approx_frame["cum_net_bps"], label="half-spread cost approx", linewidth=1.0)
-    ax.plot(bidask_frame.index, bidask_frame["cum_net_bps"], label="actual bid/ask fills", linewidth=1.0)
+    ax.plot(bidask_frame.index, bidask_frame["cum_net_bps"], label="bid/ask aware", linewidth=1.0)
     ax.axvline(TEST_START, color="black", linestyle=":", linewidth=1.0)
     ax.axhline(0, color="black", linewidth=0.8)
     ax.set_ylabel("cumulative bps")
@@ -709,52 +582,6 @@ def execution_comparison(
     plt.close(fig)
 
 
-def run_stoploss_diagnostics(
-    best_val: pd.DataFrame,
-    pairs: list[PairSpec],
-    ret: pd.DataFrame,
-    bid: pd.DataFrame,
-    ask: pd.DataFrame,
-    mid: pd.DataFrame,
-    spread_bps: pd.DataFrame,
-    center_window: int,
-    tables: Path,
-) -> pd.DataFrame:
-    rows = []
-    stop_grid: list[float | None] = [None, 3.5, 4.0, 4.5, 5.0]
-    for _, selected in best_val.iterrows():
-        stock = str(selected["stock"])
-        pair = next(p for p in pairs if p.stock == stock)
-        res = residual_ret(ret, stock, pair.beta)
-        z = rolling_zscore(res.cumsum(), center_window)
-        cost = one_way_cost_ret(spread_bps, stock, pair.beta)
-        hold = None if int(selected["max_holding_minutes"]) < 0 else int(selected["max_holding_minutes"])
-        entry_z = float(selected["entry_z"])
-        exit_z = float(selected["exit_z"])
-        for stop_z in stop_grid:
-            if stop_z is not None and stop_z <= entry_z:
-                continue
-            frame, trades = run_z_strategy(z, res, cost, entry_z, exit_z, hold, stop_z=stop_z)
-            frame, trades = apply_actual_bidask_execution(frame, trades, bid, ask, mid, stock, pair.beta)
-            for sample in ["validation", "test"]:
-                rec = {
-                    "pair": pair.pair,
-                    "stock": stock,
-                    "beta": pair.beta,
-                    "entry_z": entry_z,
-                    "exit_z": exit_z,
-                    "max_holding_minutes": -1 if hold is None else hold,
-                    "stop_z": -1.0 if stop_z is None else stop_z,
-                    "sample": sample,
-                    "execution_model": "actual_bidask_fills",
-                }
-                rec.update(summarize_sample(frame, trades, sample))
-                rows.append(rec)
-    out = pd.DataFrame(rows)
-    out.to_csv(tables / "old_pair_stoploss_grid.csv", index=False)
-    return out
-
-
 def main() -> None:
     args = parse_args()
     processed, tables, figures = setup(args.root)
@@ -763,8 +590,6 @@ def main() -> None:
     write_data_diagnostics(panel, views, tables)
 
     mid = views["mid"]
-    bid = views["bid"]
-    ask = views["ask"]
     spread_bps = views["spread_bps"]
     ret = log_returns(mid)
     pairs = make_pair_specs(ret)
@@ -777,7 +602,7 @@ def main() -> None:
     all_trades = []
     frame_lookup: dict[tuple[str, float, float, int], pd.DataFrame] = {}
     for pair in pairs:
-        grid, trades, frames = run_grid(pair, ret, bid, ask, mid, spread_bps, args.center_window, entry_grid, exit_grid, max_holding_grid)
+        grid, trades, frames = run_grid(pair, ret, spread_bps, args.center_window, entry_grid, exit_grid, max_holding_grid)
         all_grid.append(grid)
         if not trades.empty:
             all_trades.append(trades)
@@ -799,7 +624,6 @@ def main() -> None:
             & (grid_table["entry_z"] == best["entry_z"])
             & (grid_table["exit_z"] == best["exit_z"])
             & (grid_table["max_holding_minutes"] == best["max_holding_minutes"])
-            & (grid_table["stop_z"] == best["stop_z"])
             & (grid_table["sample"] == "test")
         ].iloc[0]
         spec = next(p for p in pairs if p.stock == stock)
@@ -812,7 +636,6 @@ def main() -> None:
                 "best validation entry_z": best["entry_z"],
                 "best validation exit_z": best["exit_z"],
                 "best validation max_holding_minutes": best["max_holding_minutes"],
-                "best validation stop_z": best["stop_z"],
                 "validation net bps": best["net_bps"],
                 "test net bps": test["net_bps"],
                 "test trades": test["num_trades"],
@@ -822,7 +645,6 @@ def main() -> None:
         )
     leaderboard = pd.DataFrame(leaderboard_rows).sort_values("test net bps", ascending=False)
     leaderboard.to_csv(tables / "old_pair_leaderboard.csv", index=False)
-    leaderboard.to_csv(tables / "pair_trading_leaderboard.csv", index=False)
 
     strategy_rows = []
     for _, row in leaderboard.iterrows():
@@ -834,7 +656,6 @@ def main() -> None:
             & (grid_table["entry_z"] == selected["entry_z"])
             & (grid_table["exit_z"] == selected["exit_z"])
             & (grid_table["max_holding_minutes"] == selected["max_holding_minutes"])
-            & (grid_table["stop_z"] == selected["stop_z"])
         ]
         rec = {
             "strategy": "pair_zscore",
@@ -842,8 +663,6 @@ def main() -> None:
             "entry_z": selected["entry_z"],
             "exit_z": selected["exit_z"],
             "max_holding_minutes": selected["max_holding_minutes"],
-            "stop_z": selected["stop_z"],
-            "execution_model": "actual_bidask_fills",
         }
         for sample in ["train", "validation", "test"]:
             part = chosen[chosen["sample"] == sample].iloc[0]
@@ -857,7 +676,6 @@ def main() -> None:
                 rec["gross_bps"] = part["gross_bps"]
         strategy_rows.append(rec)
     pd.DataFrame(strategy_rows).to_csv(tables / "old_strategy_diagnostics.csv", index=False)
-    run_stoploss_diagnostics(best_val, pairs, ret, bid, ask, mid, spread_bps, args.center_window, tables)
 
     audit = pd.DataFrame(
         [
@@ -900,12 +718,11 @@ def main() -> None:
             & (trades_table["entry_z"] == selected["entry_z"])
             & (trades_table["exit_z"] == selected["exit_z"])
             & (trades_table["max_holding_minutes"] == selected["max_holding_minutes"])
-            & (trades_table["stop_z"] == selected["stop_z"])
         ]
         plot_cumulative(best_frame, f"{ETF}-{stock} Pair Cumulative Net P&L", figures / "pair_best_cumulative_pnl.png")
         plot_z_with_trades(best_frame[best_frame["sample"] == "test"], best_trades[best_trades["sample"] == "test"], f"{ETF}-{stock} Test Z-Score with Trades", figures / "pair_best_zscore_with_trades.png")
         plot_drawdown(best_frame, figures / "drawdown_curve_best_strategy.png")
-        execution_comparison(selected, ret, bid, ask, mid, spread_bps, args.center_window, figures, tables)
+        execution_comparison(selected, ret, spread_bps, args.center_window, figures, tables)
 
     print("[old-data-method-upgrade] wrote:")
     for name in [
@@ -915,7 +732,6 @@ def main() -> None:
         "old_pair_leaderboard.csv",
         "old_strategy_diagnostics.csv",
         "old_selection_audit.csv",
-        "old_pair_stoploss_grid.csv",
         "midpoint_vs_bidask_execution_comparison.csv",
     ]:
         print(f"  output/tables/{name}")

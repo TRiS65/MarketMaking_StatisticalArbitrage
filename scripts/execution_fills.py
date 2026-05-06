@@ -20,17 +20,22 @@ from typing import Iterable
 import numpy as np
 import pandas as pd
 
-ETF = "XLK"
+from project_config import ETF
+
 MINUTES_PER_DAY = 390
 
 
 def load_old_quotes(processed: Path, symbols: Iterable[str] | None = None) -> dict[str, pd.DataFrame]:
     quote_parts = []
-    for month in ["01", "02", "03"]:
-        path = processed / f"minute_quotes_2026_{month}.parquet"
-        if not path.exists():
-            raise FileNotFoundError(f"Missing {path}")
-        quote_parts.append(pd.read_parquet(path))
+    new_path = processed / "minute_quotes_new.parquet"
+    if new_path.exists():
+        quote_parts.append(pd.read_parquet(new_path))
+    else:
+        for month in ["01", "02", "03"]:
+            path = processed / f"minute_quotes_2026_{month}.parquet"
+            if not path.exists():
+                raise FileNotFoundError(f"Missing {path}")
+            quote_parts.append(pd.read_parquet(path))
     quotes = pd.concat(quote_parts, ignore_index=True)
     quotes["minute"] = pd.to_datetime(quotes["minute"])
     if symbols is not None:
