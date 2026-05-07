@@ -194,6 +194,133 @@ XLK-only signal bucket test:
 | train    |             5 |               8 |              -0.0365918  |    2242 |
 | train    |             5 |               9 |               0.711996   |    2243 |
 
+## Empirical Execution Model
+
+The execution upgrade replaces fixed 0.25/0.50-spread haircuts with quantities estimated from the cleaned TAQ panel.  It is still a minute-level proxy, not a queue-level production fill model.
+
+Symbol-level cost summary:
+
+| symbol   |   median_spread_bps |   p90_spread_bps |   median_halfspread_bps |   median_volume |   median_trade_count |
+|:---------|--------------------:|-----------------:|------------------------:|----------------:|---------------------:|
+| XLK      |             1.06733 |          8.13196 |                0.533665 |        23427    |                  418 |
+| NVDA     |             1.57068 |         12.4714  |                0.78534  |       288421    |                 4373 |
+| CSCO     |             2.55135 |          7.59205 |                1.27567  |        24405.3  |                  351 |
+| AAPL     |             2.56631 |         22.8745  |                1.28316  |        55090.1  |                 1283 |
+| INTC     |             2.85063 |          9.11162 |                1.42531  |       145094    |                  876 |
+| PLTR     |             4.7727  |         24.4579  |                2.38635  |        77774    |                 1230 |
+| MSFT     |             5.21241 |         35.6472  |                2.6062   |        40339    |                 1371 |
+| ORCL     |             7.29189 |         30.0959  |                3.64594  |        40025.2  |                  804 |
+| AVGO     |             8.99922 |         35.7187  |                4.49961  |        33688.4  |                  901 |
+| AMD      |             9.17053 |         36.8594  |                4.58526  |        59688.5  |                  923 |
+| IBM      |             9.59331 |         27.9943  |                4.79666  |         5982    |                  217 |
+| QCOM     |            11.409   |         31.6557  |                5.70451  |        12446    |                  308 |
+| MU       |            12.0517  |         38.2396  |                6.02586  |        52313    |                  921 |
+| APH      |            13.9352  |         45.4155  |                6.96762  |        11321    |                  209 |
+| LRCX     |            16.0727  |         45.1448  |                8.03635  |        13039    |                  292 |
+| TXN      |            17.491   |         44.6679  |                8.74548  |         7933    |                  188 |
+| ANET     |            19.4284  |         51.0081  |                9.71419  |        10214.5  |                  208 |
+| AMAT     |            24.0668  |         55.0472  |               12.0334   |         7912.77 |                  212 |
+| ADI      |            25.7225  |         55.5283  |               12.8612   |         4123.83 |                  131 |
+| KLAC     |            40.8643  |         75.662   |               20.4322   |         1004    |                   84 |
+
+Latency taker-cost summary:
+
+| symbol   |   latency_min |   buy_taker_cost_bps_median |   sell_taker_cost_bps_median |   roundtrip_two_leg_cost_bps_median |
+|:---------|--------------:|----------------------------:|-----------------------------:|------------------------------------:|
+| AAPL     |             0 |                     1.28316 |                      1.28316 |                             2.56631 |
+| AAPL     |             1 |                     2.21844 |                      2.38826 |                             2.56664 |
+| AAPL     |             2 |                     2.49544 |                      2.67339 |                             2.56551 |
+| AAPL     |             5 |                     2.74069 |                      3.07432 |                             2.5657  |
+| ADI      |             0 |                    12.8612  |                     12.8612  |                            25.7225  |
+| ADI      |             1 |                    12.4951  |                     12.4692  |                            25.7245  |
+| ADI      |             2 |                    12.5822  |                     12.4684  |                            25.7249  |
+| ADI      |             5 |                    12.9168  |                     12.2458  |                            25.7361  |
+| AMAT     |             0 |                    12.0334  |                     12.0334  |                            24.0668  |
+| AMAT     |             1 |                    11.8097  |                     11.7248  |                            24.0623  |
+| AMAT     |             2 |                    11.9653  |                     11.8223  |                            24.0582  |
+| AMAT     |             5 |                    12.3191  |                     11.6376  |                            24.067   |
+| AMD      |             0 |                     4.58526 |                      4.58526 |                             9.17053 |
+| AMD      |             1 |                     5.68927 |                      5.69671 |                             9.17276 |
+| AMD      |             2 |                     5.98086 |                      5.74971 |                             9.17097 |
+| AMD      |             5 |                     6.11235 |                      6.10513 |                             9.16323 |
+| ANET     |             0 |                     9.71419 |                      9.71419 |                            19.4284  |
+| ANET     |             1 |                     9.8695  |                      9.92745 |                            19.4322  |
+| ANET     |             2 |                    10.1099  |                     10.0839  |                            19.4259  |
+| ANET     |             5 |                    10.3746  |                     10.2609  |                            19.4395  |
+
+Passive touch-fill / markout proxy:
+
+| symbol   | time_bucket   | spread_bucket   | imb_bucket   |   buy_bid_fill_prob |   sell_ask_fill_prob |   buy_passive_markout_cost_bps_median_if_filled |   sell_passive_markout_cost_bps_median_if_filled |
+|:---------|:--------------|:----------------|:-------------|--------------------:|---------------------:|------------------------------------------------:|-------------------------------------------------:|
+| AAPL     | open30        | s_q1            | balanced     |            0.810345 |             0.724138 |                                        -5.95626 |                                        14.5141   |
+| AAPL     | open30        | s_q2            | ask_heavy    |            0.707483 |             0.77551  |                                         3.82539 |                                         7.53579  |
+| AAPL     | open30        | s_q2            | balanced     |            0.713889 |             0.741667 |                                         5.84078 |                                         9.81162  |
+| AAPL     | open30        | s_q2            | bid_heavy    |            0.717742 |             0.709677 |                                         4.47604 |                                         5.91913  |
+| AAPL     | open30        | s_q3            | ask_heavy    |            0.683333 |             0.6625   |                                         6.39857 |                                         8.73948  |
+| AAPL     | open30        | s_q3            | balanced     |            0.674157 |             0.700843 |                                         6.12004 |                                         7.35778  |
+| AAPL     | open30        | s_q3            | bid_heavy    |            0.675105 |             0.687764 |                                         5.73794 |                                        15.2521   |
+| AAPL     | open30        | s_q4            | ask_heavy    |            0.551282 |             0.470085 |                                         8.16951 |                                         6.33904  |
+| AAPL     | open30        | s_q4            | balanced     |            0.45     |             0.462162 |                                         6.12769 |                                         7.88713  |
+| AAPL     | open30        | s_q4            | bid_heavy    |            0.448148 |             0.585185 |                                         7.22514 |                                         6.54906  |
+| AAPL     | mid_morning   | s_q1            | ask_heavy    |            0.730061 |             0.742331 |                                         5.06743 |                                         1.09345  |
+| AAPL     | mid_morning   | s_q1            | balanced     |            0.737805 |             0.72439  |                                         4.06827 |                                         2.9168   |
+| AAPL     | mid_morning   | s_q1            | bid_heavy    |            0.716146 |             0.723958 |                                         4.60498 |                                         0.860931 |
+| AAPL     | mid_morning   | s_q2            | ask_heavy    |            0.688312 |             0.737013 |                                         5.5052  |                                         1.59559  |
+| AAPL     | mid_morning   | s_q2            | balanced     |            0.704127 |             0.740317 |                                         3.67053 |                                         3.72736  |
+| AAPL     | mid_morning   | s_q2            | bid_heavy    |            0.69012  |             0.730539 |                                         3.65497 |                                         4.34678  |
+| AAPL     | mid_morning   | s_q3            | ask_heavy    |            0.639659 |             0.648188 |                                         4.90907 |                                         2.19208  |
+| AAPL     | mid_morning   | s_q3            | balanced     |            0.639934 |             0.665376 |                                         4.60694 |                                         2.01887  |
+| AAPL     | mid_morning   | s_q3            | bid_heavy    |            0.678899 |             0.644037 |                                         4.65464 |                                         2.73618  |
+| AAPL     | mid_morning   | s_q4            | ask_heavy    |            0.4375   |             0.269737 |                                         3.42156 |                                         4.36247  |
+
+## Execution-Optimized Pair Backtest
+
+The maker/taker execution backtest is intentionally treated as a candidate screen.  It uses observed bid/ask fills and last-trade crossing proxies.  Positive validation results are not considered tradable unless the out-of-sample audit survives.
+
+| stock   | spread_type               | policy   |   val_trades |   val_net_bps |   test_trades |   test_net_bps | decision             | oos_decision           | final_policy   |
+|:--------|:--------------------------|:---------|-------------:|--------------:|--------------:|---------------:|:---------------------|:-----------------------|:---------------|
+| INTC    | price_regression_residual | taker    |           20 |       3083.69 |            43 |       -3416.85 | validation_candidate | reject_after_oos_audit | no_trade       |
+
+## Loss Streamline Decision
+
+| research_path                       | decision                    | reason                                                                                                                                             |   train_or_validation_net_bps |   test_net_bps |   raw_test_net_bps_before_gate |
+|:------------------------------------|:----------------------------|:---------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------:|---------------:|-------------------------------:|
+| market_neutral_pair_or_basket       | no_trade                    | validation-selected active pair/basket rules fail no-trade gate or lose after costs                                                                |                       nan     |         0      |                    -53500.6    |
+| robust_alpha_suite_selected         | no_trade                    | selected robust-alpha rule loses OOS or does not beat no-trade                                                                                     |                       472.546 |       -17.7254 |                       -17.7254 |
+| fixed_bps_xlk_only_timing_candidate | legacy_candidate_shape_only | legacy profit-search output is Jan-Feb positive, but it predates expanded top-20 controls and is not final evidence                                |                       456.479 |       613.353  |                       613.353  |
+| expanded_fixed_bps_xlk_only_timing  | no_trade                    | train_or_validation_net<=0;test_net<=0;2x_cost_test<=0;latency1_test<=0;does_not_beat_directional_control;sign_flip_not_worse;circular_pvalue>0.10 |                     -2115.46  |      -977.239  |                      -977.239  |
+
+## Fixed-BPS Timing Controls on Expanded Data
+
+This section regenerates the old fixed-bps sparse timing candidate shape on the expanded top-20 panel.  The old `profit_search_*` tables are legacy candidate screens; this is the current-data control result.
+
+| decision   | reason                                                                                                                                             | basket_symbols         |   train_net_bps |   validation_net_bps |   test_net_bps |   test_2x_cost_net_bps |   test_latency1_net_bps |   circular_pvalue |
+|:-----------|:---------------------------------------------------------------------------------------------------------------------------------------------------|:-----------------------|----------------:|---------------------:|---------------:|-----------------------:|------------------------:|------------------:|
+| no_trade   | train_or_validation_net<=0;test_net<=0;2x_cost_test<=0;latency1_test<=0;does_not_beat_directional_control;sign_flip_not_worse;circular_pvalue>0.10 | NVDA AAPL MSFT AVGO MU |        -2115.46 |             -45.1272 |       -977.239 |               -1211.91 |                -1034.28 |               0.8 |
+
+Controls:
+
+| control                     |   train_net_bps |   validation_net_bps |   test_net_bps |   test_trades |
+|:----------------------------|----------------:|---------------------:|---------------:|--------------:|
+| selected                    |      -2115.46   |             -45.1272 |       -977.239 |            83 |
+| sign_flip                   |       1091.32   |            -238.614  |        507.89  |            83 |
+| active_always_long          |      -1032.71   |            -344.133  |        807.851 |            83 |
+| active_always_short         |          8.5748 |              60.3926 |      -1277.2   |            83 |
+| circular_shift_mean         |        nan      |             nan      |       -335.576 |           nan |
+| circular_shift_p95          |        nan      |             nan      |        736.585 |           nan |
+| selected_vs_circular_pvalue |        nan      |             nan      |          0.8   |           nan |
+
+Monthly PnL:
+
+| month   |   gross_bps |   cost_bps |    net_bps |   trades |
+|:--------|------------:|-----------:|-----------:|---------:|
+| 2025-11 |   -454.955  |    206.546 |  -661.5    |       38 |
+| 2025-12 |   -916.798  |    169.95  | -1086.75   |       46 |
+| 2026-01 |   -231.636  |    135.574 |  -367.21   |       44 |
+| 2026-02 |     96.7432 |    141.87  |   -45.1272 |       40 |
+| 2026-03 |    197.418  |    126.355 |    71.0634 |       42 |
+| 2026-04 |   -939.983  |    108.32  | -1048.3    |       41 |
+
 ## Sparse Market-Neutral Basket
 
 | subset                  |   k | betas                                                      |   train_adf_p |   train_half_life_minutes |   train_avg_oneway_cost_bps |    score |
@@ -288,6 +415,7 @@ The next report should avoid saying "ETF arbitrage is profitable" unless a marke
 3. Extend signal bucket tests into formal timing selection only if the decile relation is stable across train/validation/test.
 4. Add portfolio-level drawdown / VaR constraints for correlated constituent losses.
 5. Add a formal DSR / multiple-testing section using the trial registry as the denominator.
+6. Regenerate the fixed-bps sparse5 timing candidate on the expanded top-20 sample before using it as final evidence; legacy profit-search outputs are candidate shapes only.
 
 ## Reproducibility
 

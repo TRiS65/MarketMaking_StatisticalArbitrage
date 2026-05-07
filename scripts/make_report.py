@@ -82,6 +82,14 @@ def markdown_report() -> Path:
     top20_gate = read_optional("top20_no_trade_gate.csv")
     top20_buckets = read_optional("top20_signal_bucket.csv")
     top20_exits = read_optional("top20_exit_reason_audit.csv")
+    empirical_symbol_costs = read_optional("empirical_symbol_costs.csv")
+    empirical_latency = read_optional("empirical_taker_latency_costs.csv")
+    empirical_passive = read_optional("empirical_passive_fill_model.csv")
+    execution_selection = read_optional("execution_optimized_selection.csv")
+    loss_decision = read_optional("loss_streamline_decision.csv")
+    fixed_bps_selection = read_optional("fixed_bps_timing_selection.csv")
+    fixed_bps_controls = read_optional("fixed_bps_timing_controls.csv")
+    fixed_bps_monthly = read_optional("fixed_bps_timing_monthly.csv")
 
     text = f"""# XLK Microstructure Statistical Arbitrage: New-Data Progress Report
 
@@ -145,6 +153,46 @@ XLK-only signal bucket test:
 
 {md_table(top20_buckets, ['sample', 'horizon_min', 'signal_decile', 'mean_future_return_bps', 'count'], 20)}
 
+## Empirical Execution Model
+
+The execution upgrade replaces fixed 0.25/0.50-spread haircuts with quantities estimated from the cleaned TAQ panel.  It is still a minute-level proxy, not a queue-level production fill model.
+
+Symbol-level cost summary:
+
+{md_table(empirical_symbol_costs, ['symbol', 'median_spread_bps', 'p90_spread_bps', 'median_halfspread_bps', 'median_volume', 'median_trade_count'], 20)}
+
+Latency taker-cost summary:
+
+{md_table(empirical_latency, ['symbol', 'latency_min', 'buy_taker_cost_bps_median', 'sell_taker_cost_bps_median', 'roundtrip_two_leg_cost_bps_median'], 20)}
+
+Passive touch-fill / markout proxy:
+
+{md_table(empirical_passive, ['symbol', 'time_bucket', 'spread_bucket', 'imb_bucket', 'buy_bid_fill_prob', 'sell_ask_fill_prob', 'buy_passive_markout_cost_bps_median_if_filled', 'sell_passive_markout_cost_bps_median_if_filled'], 20)}
+
+## Execution-Optimized Pair Backtest
+
+The maker/taker execution backtest is intentionally treated as a candidate screen.  It uses observed bid/ask fills and last-trade crossing proxies.  Positive validation results are not considered tradable unless the out-of-sample audit survives.
+
+{md_table(execution_selection, ['stock', 'spread_type', 'policy', 'val_trades', 'val_net_bps', 'test_trades', 'test_net_bps', 'decision', 'oos_decision', 'final_policy'], 10)}
+
+## Loss Streamline Decision
+
+{md_table(loss_decision, ['research_path', 'decision', 'reason', 'train_or_validation_net_bps', 'test_net_bps', 'raw_test_net_bps_before_gate'], 10)}
+
+## Fixed-BPS Timing Controls on Expanded Data
+
+This section regenerates the old fixed-bps sparse timing candidate shape on the expanded top-20 panel.  The old `profit_search_*` tables are legacy candidate screens; this is the current-data control result.
+
+{md_table(fixed_bps_selection, ['decision', 'reason', 'basket_symbols', 'train_net_bps', 'validation_net_bps', 'test_net_bps', 'test_2x_cost_net_bps', 'test_latency1_net_bps', 'circular_pvalue'], 5)}
+
+Controls:
+
+{md_table(fixed_bps_controls, ['control', 'train_net_bps', 'validation_net_bps', 'test_net_bps', 'test_trades'], 10)}
+
+Monthly PnL:
+
+{md_table(fixed_bps_monthly, ['month', 'gross_bps', 'cost_bps', 'net_bps', 'trades'], 10)}
+
 ## Sparse Market-Neutral Basket
 
 {md_table(candidates, ['subset', 'k', 'betas', 'train_adf_p', 'train_half_life_minutes', 'train_avg_oneway_cost_bps', 'score'], 10)}
@@ -190,6 +238,7 @@ The next report should avoid saying "ETF arbitrage is profitable" unless a marke
 3. Extend signal bucket tests into formal timing selection only if the decile relation is stable across train/validation/test.
 4. Add portfolio-level drawdown / VaR constraints for correlated constituent losses.
 5. Add a formal DSR / multiple-testing section using the trial registry as the denominator.
+6. Regenerate the fixed-bps sparse5 timing candidate on the expanded top-20 sample before using it as final evidence; legacy profit-search outputs are candidate shapes only.
 
 ## Reproducibility
 
@@ -213,6 +262,11 @@ def pdf_report() -> Path:
     top20_methods = read_optional("top20_method_comparison_summary.csv")
     top20_gate = read_optional("top20_no_trade_gate.csv")
     sparse_bidask = read_optional("enhanced_sparse_bidask_comparison.csv")
+    empirical_symbol_costs = read_optional("empirical_symbol_costs.csv")
+    empirical_latency = read_optional("empirical_taker_latency_costs.csv")
+    execution_selection = read_optional("execution_optimized_selection.csv")
+    loss_decision = read_optional("loss_streamline_decision.csv")
+    fixed_bps_selection = read_optional("fixed_bps_timing_selection.csv")
 
     styles = getSampleStyleSheet()
     out = OUTPUT / "research_report.pdf"
@@ -232,6 +286,11 @@ def pdf_report() -> Path:
     table_story(story, "Robust Alpha Selection", robust_selection, ["decision", "economic_label", "selected_strategy", "train_net_bps", "test_net_bps"], styles, 2, 5)
     table_story(story, "Top-20 Method Diagnostics", top20_methods, ["method", "selected_pairs", "gate_pass_pairs", "raw_test_net_bps", "gate_test_net_bps", "test_trades"], styles, 2, 8)
     table_story(story, "No-Trade Gate Examples", top20_gate, ["pair_or_basket", "method", "validation_net_bps", "test_net_bps", "gate_selected_flag", "gate_reason"], styles, 2, 10)
+    table_story(story, "Empirical Symbol Costs", empirical_symbol_costs, ["symbol", "median_spread_bps", "p90_spread_bps", "median_halfspread_bps", "median_volume"], styles, 2, 20)
+    table_story(story, "Latency Taker Costs", empirical_latency, ["symbol", "latency_min", "buy_taker_cost_bps_median", "sell_taker_cost_bps_median"], styles, 2, 20)
+    table_story(story, "Execution-Optimized Pair Audit", execution_selection, ["stock", "spread_type", "policy", "val_net_bps", "test_net_bps", "oos_decision", "final_policy"], styles, 2, 5)
+    table_story(story, "Loss Streamline Decision", loss_decision, ["research_path", "decision", "test_net_bps"], styles, 2, 5)
+    table_story(story, "Expanded Fixed-BPS Timing Controls", fixed_bps_selection, ["decision", "basket_symbols", "train_net_bps", "validation_net_bps", "test_net_bps", "circular_pvalue"], styles, 2, 5)
     table_story(story, "Robust Alpha Controls", robust_controls, ["control", "train_net_bps", "test_net_bps", "test_trades"], styles, 2, 8)
     table_story(story, "XLK-Only Timing", timing, ["period", "gross_bps", "cost_bps", "net_bps", "trades"], styles, 2, 8)
     for fig_name in ["professor_cost_scenario_leaderboard.png", "top20_method_comparison.png", "top20_signal_bucket.png", "robust_alpha_selected_cumulative.png", "timing_extension_cumulative_net.png"]:

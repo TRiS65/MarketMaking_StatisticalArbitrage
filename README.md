@@ -39,6 +39,10 @@ The raw build scans more than 90GB of gzipped TAQ data, so it is intentionally s
 | `scripts/research_utils.py` | Shared panel alignment, returns, OU, last-trade proxy, and spread helpers |
 | `scripts/run_professor_robustness.py` | Spread-definition and transaction-cost robustness requested by professor |
 | `scripts/run_top20_method_diagnostics.py` | Real-only top-20 pair diagnostics with no-trade gate, lagged Kalman beta, passive stress, exit reasons, and signal buckets |
+| `scripts/run_empirical_execution_model.py` | Empirical bid/ask, latency, passive-fill markout, and capacity cost calibration |
+| `scripts/run_execution_optimized_backtest.py` | Minute-level maker/taker execution screen for pair candidates |
+| `scripts/run_fixed_bps_timing_controls.py` | Expanded-sample controls for the fixed-bps XLK-only timing candidate shape |
+| `scripts/run_loss_streamline.py` | Table-driven loss attribution and active/no-trade policy summary |
 | `scripts/run_robust_alpha_suite.py` | Joint optimizer for XLK-only timing and partial/full hedge variants |
 | `scripts/run_final_analysis.py` | Sparse market-neutral basket benchmark |
 | `scripts/run_timing_extension.py` | XLK-only timing extension using top-holdings basket premium |
@@ -108,6 +112,12 @@ The new diagnostics include OU/Avellaneda-Lee style mean-reversion scores. The n
 | `output/tables/top20_no_trade_gate.csv` | Why selected active pair rules are accepted or rejected |
 | `output/tables/top20_exit_reason_audit.csv` | Reversion/max-hold/stop-loss/EOD exit reason P&L |
 | `output/tables/top20_signal_bucket.csv` | Sparse-basket signal deciles vs future XLK returns |
+| `output/tables/empirical_symbol_costs.csv` | Observed spread, volume, and trade-count execution-cost summary |
+| `output/tables/empirical_taker_latency_costs.csv` | Quote-boundary taker cost using 0/1/2/5 minute latency quotes |
+| `output/tables/empirical_passive_fill_model.csv` | Last-trade touch-fill and markout proxy by symbol/time/spread/imbalance bucket |
+| `output/tables/execution_optimized_selection.csv` | Maker/taker execution-screen selection and OOS audit |
+| `output/tables/fixed_bps_timing_selection.csv` | Expanded-sample fixed-bps timing decision and controls summary |
+| `output/tables/loss_streamline_decision.csv` | Final active/no-trade policy summary by research path |
 | `output/tables/robust_alpha_selection.csv` | Train-only robust alpha selection decision |
 | `output/tables/robust_alpha_controls.csv` | Sign-flip, always-long/short, circular-shift controls |
 | `output/tables/robust_alpha_cost_sensitivity.csv` | Cost multiplier sensitivity |
@@ -131,6 +141,8 @@ The first new-data quick run gives a more conservative conclusion than the old J
 | Fixed top-holdings XLK-only timing | validation `+205.74` bps | test `-852.43` bps | Old fixed timing rule does not transfer |
 | Robust alpha quick selected XLK-only timing | train `+472.55` bps | test `-17.73` bps | Better than fixed rule, but no-trade still wins test |
 | Top-20 pair method diagnostics after no-trade gate | varies | `0.00` bps | Every validation-selected pair method fails at least one gate |
+| Execution-optimized pair screen | validation candidate `+3083.69` bps | test `-3416.85` bps | Validation false positive; final policy remains no-trade |
+| Expanded fixed-bps XLK-only timing controls | train `-2115.46` bps, validation `-45.13` bps | test `-977.24` bps | Old fixed-bps candidate shape does not transfer |
 
 The professor robustness table does find pair/spread definitions where no-cost and 0.25-spread results are strongly positive, while 0.50-spread taker costs often erase the edge. That is the main empirical evidence that execution quality is now the central research question.
 
@@ -139,5 +151,22 @@ there is no synthetic fallback, Kalman beta is lagged, passive entries include
 adverse selection, and each trial is registered.  The combined filters reduce
 some losses, but they do not create a tradable pair alpha in the expanded sample.
 The no-trade gate rejects all selected pair rules.
+
+The execution upgrade replaces fixed cost multipliers with observed bid/ask,
+latency quotes, last-trade passive touch-fill proxies, markout, and capacity
+stress.  It does not claim queue-level fills.  The quick maker/taker screen finds
+a validation candidate, but it loses out of sample, so the execution-layer policy
+also remains no-trade for market-neutral pair trading.
+
+Legacy `profit_search_*` outputs identify a useful fixed-bps sparse5 timing
+candidate shape, but those files predate the expanded top-20 pipeline.  They are
+not final new-data evidence until regenerated and passed through sign-flip,
+always-long/short, circular-shift, latency, and cost-stress controls.
+
+The regenerated expanded-sample fixed-bps timing controls reject that candidate
+shape: the current top-5 holdings basket loses in train, validation, and test;
+the sign-flip and always-long controls are better on the test period.  Therefore
+the current final policy remains no-trade for both strict arbitrage and the
+tested active timing rule.
 
 Reference PDFs are intentionally kept local and are not pushed to GitHub.

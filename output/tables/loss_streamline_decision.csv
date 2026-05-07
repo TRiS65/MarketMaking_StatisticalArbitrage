@@ -1,0 +1,5 @@
+research_path,decision,reason,train_or_validation_net_bps,test_net_bps,raw_test_net_bps_before_gate
+market_neutral_pair_or_basket,no_trade,validation-selected active pair/basket rules fail no-trade gate or lose after costs,,0.0,-53500.59482714178
+robust_alpha_suite_selected,no_trade,selected robust-alpha rule loses OOS or does not beat no-trade,472.5459568673186,-17.72538874632618,-17.72538874632618
+fixed_bps_xlk_only_timing_candidate,legacy_candidate_shape_only,"legacy profit-search output is Jan-Feb positive, but it predates expanded top-20 controls and is not final evidence",456.47909374165073,613.3530614958253,613.3530614958253
+expanded_fixed_bps_xlk_only_timing,no_trade,train_or_validation_net<=0;test_net<=0;2x_cost_test<=0;latency1_test<=0;does_not_beat_directional_control;sign_flip_not_worse;circular_pvalue>0.10,-2115.4579442410177,-977.2390831260766,-977.2390831260766

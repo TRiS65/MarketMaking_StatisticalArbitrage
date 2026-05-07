@@ -32,12 +32,17 @@ def main() -> None:
         run([py, "scripts/build_dataset.py", "--force"])
     run([py, "scripts/run_final_analysis.py"])
     run([py, "scripts/run_professor_robustness.py"])
+    run([py, "scripts/run_top20_method_diagnostics.py"])
+    run([py, "scripts/run_empirical_execution_model.py", "--root", "."])
     robust = [py, "scripts/run_robust_alpha_suite.py", "--root", ".", "--max-subset-size", "5", "--top-candidates", "12", "--n-shifts", "150"]
     if args.quick:
         robust.append("--quick")
     run(robust)
+    run([py, "scripts/run_execution_optimized_backtest.py", "--root", ".", "--quick"])
+    run([py, "scripts/run_fixed_bps_timing_controls.py", "--root", ".", "--n-shifts", "200"])
     run([py, "scripts/run_timing_extension.py"])
     run([py, "scripts/run_timing_bidask_execution.py"])
+    run([py, "scripts/run_loss_streamline.py", "--root", "."])
     run([py, "scripts/make_report.py"])
 
 

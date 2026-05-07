@@ -1,0 +1,2 @@
+decision,reason,basket_symbols,basket_weights,signal_price,center_days,entry_bps,exit_bps,max_hold,train_net_bps,validation_net_bps,test_net_bps,test_trades,circular_pvalue,test_2x_cost_net_bps,test_latency1_net_bps
+no_trade,train_or_validation_net<=0;test_net<=0;2x_cost_test<=0;latency1_test<=0;does_not_beat_directional_control;sign_flip_not_worse;circular_pvalue>0.10,NVDA AAPL MSFT AVGO MU,NVDA:0.3112 AAPL:0.2654 MSFT:0.1986 AVGO:0.1289 MU:0.0959,micro,10,50.0,25.0,390,-2115.4579442410177,-45.12718098685402,-977.2390831260766,83.0,0.8,-1211.9135864224368,-1034.284369450009
