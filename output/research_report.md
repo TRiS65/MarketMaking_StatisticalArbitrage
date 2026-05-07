@@ -321,6 +321,45 @@ Monthly PnL:
 | 2026-03 |    197.418  |    126.355 |    71.0634 |       42 |
 | 2026-04 |   -939.983  |    108.32  | -1048.3    |       41 |
 
+## Lecture-Driven Microstructure Refinement
+
+The Baruch notes suggest a useful next layer: do not add a fancier spread model, but condition trading on order-flow, spread, volatility, and impact states.  I implemented a small ridge timing screen using basket premium, quote imbalance, Lee-Ready style signed flow, realized volatility, and a Kyle-style liquidity proxy.  It is trained on the train split only and threshold-selected on validation.
+
+Horizon sweep:
+
+|   horizon_min | decision   | reason                                              |   threshold_pred_bps |   train_net_bps |   validation_net_bps |   test_net_bps |   test_trades |
+|--------------:|:-----------|:----------------------------------------------------|---------------------:|----------------:|---------------------:|---------------:|--------------:|
+|             5 | no_trade   | no validation-positive threshold with enough trades |                    8 |          0      |               0      |       0        |             0 |
+|            15 | no_trade   | no validation-positive threshold with enough trades |                   12 |          0      |             -44.368  |       0        |             0 |
+|            30 | no_trade   | no validation-positive threshold with enough trades |                   12 |        -39.9371 |             -40.8502 |       0.389492 |            14 |
+|            60 | no_trade   | no validation-positive threshold with enough trades |                   12 |        -14.9009 |            -213.331  |     -47.3      |            40 |
+
+Controls for the last run:
+
+| control             |   train_net_bps |   validation_net_bps |   test_net_bps |   test_trades |
+|:--------------------|----------------:|---------------------:|---------------:|--------------:|
+| selected            |        -14.9009 |             -213.331 |       -47.3    |            40 |
+| sign_flip           |       -193.159  |             -181.897 |       -78.9887 |            40 |
+| active_always_long  |       -193.159  |             -181.897 |       -78.9887 |            40 |
+| active_always_short |        -14.9009 |             -213.331 |       -47.3    |            40 |
+
+Largest ridge coefficients:
+
+| feature           |       coef |
+|:------------------|-----------:|
+| premium_mid_bps   |  2.83863   |
+| realized_vol_bps  | -2.10577   |
+| kyle_lambda_proxy |  1.37726   |
+| premium_micro_bps | -1.2952    |
+| intercept         | -0.997884  |
+| xlk_micro_gap_bps |  0.74131   |
+| xlk_ret_lag5_bps  |  0.721895  |
+| xlk_ret_lag1_bps  |  0.605648  |
+| xlk_ret_lag15_bps |  0.500674  |
+| signed_flow_5     | -0.308216  |
+| xlk_spread_bps    |  0.149119  |
+| roll_premium_bps  | -0.0451124 |
+
 ## Sparse Market-Neutral Basket
 
 | subset                  |   k | betas                                                      |   train_adf_p |   train_half_life_minutes |   train_avg_oneway_cost_bps |    score |
@@ -416,6 +455,7 @@ The next report should avoid saying "ETF arbitrage is profitable" unless a marke
 4. Add portfolio-level drawdown / VaR constraints for correlated constituent losses.
 5. Add a formal DSR / multiple-testing section using the trial registry as the denominator.
 6. Regenerate the fixed-bps sparse5 timing candidate on the expanded top-20 sample before using it as final evidence; legacy profit-search outputs are candidate shapes only.
+7. If pursuing a positive extension, move from linear microstructure timing to conditional gates: avoid high spread / high volatility states, trade only where order-flow and basket-premium signs agree, and validate on event-level fills.
 
 ## Reproducibility
 

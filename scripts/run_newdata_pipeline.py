@@ -40,6 +40,7 @@ def main() -> None:
     run(robust)
     run([py, "scripts/run_execution_optimized_backtest.py", "--root", ".", "--quick"])
     run([py, "scripts/run_fixed_bps_timing_controls.py", "--root", ".", "--n-shifts", "200"])
+    run([py, "scripts/run_microstructure_signal_refinement.py", "--root", "."])
     run([py, "scripts/run_timing_extension.py"])
     run([py, "scripts/run_timing_bidask_execution.py"])
     run([py, "scripts/run_loss_streamline.py", "--root", "."])

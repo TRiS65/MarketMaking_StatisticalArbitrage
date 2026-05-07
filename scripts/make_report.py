@@ -90,6 +90,9 @@ def markdown_report() -> Path:
     fixed_bps_selection = read_optional("fixed_bps_timing_selection.csv")
     fixed_bps_controls = read_optional("fixed_bps_timing_controls.csv")
     fixed_bps_monthly = read_optional("fixed_bps_timing_monthly.csv")
+    micro_refine = read_optional("microstructure_refinement_horizon_summary.csv")
+    micro_refine_controls = read_optional("microstructure_refinement_controls.csv")
+    micro_refine_coef = read_optional("microstructure_refinement_coefficients.csv")
 
     text = f"""# XLK Microstructure Statistical Arbitrage: New-Data Progress Report
 
@@ -193,6 +196,22 @@ Monthly PnL:
 
 {md_table(fixed_bps_monthly, ['month', 'gross_bps', 'cost_bps', 'net_bps', 'trades'], 10)}
 
+## Lecture-Driven Microstructure Refinement
+
+The Baruch notes suggest a useful next layer: do not add a fancier spread model, but condition trading on order-flow, spread, volatility, and impact states.  I implemented a small ridge timing screen using basket premium, quote imbalance, Lee-Ready style signed flow, realized volatility, and a Kyle-style liquidity proxy.  It is trained on the train split only and threshold-selected on validation.
+
+Horizon sweep:
+
+{md_table(micro_refine, ['horizon_min', 'decision', 'reason', 'threshold_pred_bps', 'train_net_bps', 'validation_net_bps', 'test_net_bps', 'test_trades'], 10)}
+
+Controls for the last run:
+
+{md_table(micro_refine_controls, ['control', 'train_net_bps', 'validation_net_bps', 'test_net_bps', 'test_trades'], 10)}
+
+Largest ridge coefficients:
+
+{md_table(micro_refine_coef, ['feature', 'coef'], 12)}
+
 ## Sparse Market-Neutral Basket
 
 {md_table(candidates, ['subset', 'k', 'betas', 'train_adf_p', 'train_half_life_minutes', 'train_avg_oneway_cost_bps', 'score'], 10)}
@@ -239,6 +258,7 @@ The next report should avoid saying "ETF arbitrage is profitable" unless a marke
 4. Add portfolio-level drawdown / VaR constraints for correlated constituent losses.
 5. Add a formal DSR / multiple-testing section using the trial registry as the denominator.
 6. Regenerate the fixed-bps sparse5 timing candidate on the expanded top-20 sample before using it as final evidence; legacy profit-search outputs are candidate shapes only.
+7. If pursuing a positive extension, move from linear microstructure timing to conditional gates: avoid high spread / high volatility states, trade only where order-flow and basket-premium signs agree, and validate on event-level fills.
 
 ## Reproducibility
 
@@ -267,6 +287,7 @@ def pdf_report() -> Path:
     execution_selection = read_optional("execution_optimized_selection.csv")
     loss_decision = read_optional("loss_streamline_decision.csv")
     fixed_bps_selection = read_optional("fixed_bps_timing_selection.csv")
+    micro_refine = read_optional("microstructure_refinement_horizon_summary.csv")
 
     styles = getSampleStyleSheet()
     out = OUTPUT / "research_report.pdf"
@@ -291,6 +312,7 @@ def pdf_report() -> Path:
     table_story(story, "Execution-Optimized Pair Audit", execution_selection, ["stock", "spread_type", "policy", "val_net_bps", "test_net_bps", "oos_decision", "final_policy"], styles, 2, 5)
     table_story(story, "Loss Streamline Decision", loss_decision, ["research_path", "decision", "test_net_bps"], styles, 2, 5)
     table_story(story, "Expanded Fixed-BPS Timing Controls", fixed_bps_selection, ["decision", "basket_symbols", "train_net_bps", "validation_net_bps", "test_net_bps", "circular_pvalue"], styles, 2, 5)
+    table_story(story, "Microstructure Refinement Horizon Sweep", micro_refine, ["horizon_min", "decision", "train_net_bps", "validation_net_bps", "test_net_bps", "test_trades"], styles, 2, 8)
     table_story(story, "Robust Alpha Controls", robust_controls, ["control", "train_net_bps", "test_net_bps", "test_trades"], styles, 2, 8)
     table_story(story, "XLK-Only Timing", timing, ["period", "gross_bps", "cost_bps", "net_bps", "trades"], styles, 2, 8)
     for fig_name in ["professor_cost_scenario_leaderboard.png", "top20_method_comparison.png", "top20_signal_bucket.png", "robust_alpha_selected_cumulative.png", "timing_extension_cumulative_net.png"]:

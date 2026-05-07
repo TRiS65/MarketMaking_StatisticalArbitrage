@@ -42,6 +42,7 @@ The raw build scans more than 90GB of gzipped TAQ data, so it is intentionally s
 | `scripts/run_empirical_execution_model.py` | Empirical bid/ask, latency, passive-fill markout, and capacity cost calibration |
 | `scripts/run_execution_optimized_backtest.py` | Minute-level maker/taker execution screen for pair candidates |
 | `scripts/run_fixed_bps_timing_controls.py` | Expanded-sample controls for the fixed-bps XLK-only timing candidate shape |
+| `scripts/run_microstructure_signal_refinement.py` | Lecture-driven order-flow/spread/volatility/impact feature timing screen |
 | `scripts/run_loss_streamline.py` | Table-driven loss attribution and active/no-trade policy summary |
 | `scripts/run_robust_alpha_suite.py` | Joint optimizer for XLK-only timing and partial/full hedge variants |
 | `scripts/run_final_analysis.py` | Sparse market-neutral basket benchmark |
@@ -117,6 +118,7 @@ The new diagnostics include OU/Avellaneda-Lee style mean-reversion scores. The n
 | `output/tables/empirical_passive_fill_model.csv` | Last-trade touch-fill and markout proxy by symbol/time/spread/imbalance bucket |
 | `output/tables/execution_optimized_selection.csv` | Maker/taker execution-screen selection and OOS audit |
 | `output/tables/fixed_bps_timing_selection.csv` | Expanded-sample fixed-bps timing decision and controls summary |
+| `output/tables/microstructure_refinement_horizon_summary.csv` | Order-flow/spread/volatility/impact timing horizon sweep |
 | `output/tables/loss_streamline_decision.csv` | Final active/no-trade policy summary by research path |
 | `output/tables/robust_alpha_selection.csv` | Train-only robust alpha selection decision |
 | `output/tables/robust_alpha_controls.csv` | Sign-flip, always-long/short, circular-shift controls |
@@ -143,6 +145,7 @@ The first new-data quick run gives a more conservative conclusion than the old J
 | Top-20 pair method diagnostics after no-trade gate | varies | `0.00` bps | Every validation-selected pair method fails at least one gate |
 | Execution-optimized pair screen | validation candidate `+3083.69` bps | test `-3416.85` bps | Validation false positive; final policy remains no-trade |
 | Expanded fixed-bps XLK-only timing controls | train `-2115.46` bps, validation `-45.13` bps | test `-977.24` bps | Old fixed-bps candidate shape does not transfer |
+| Microstructure feature timing refinement | no horizon passes validation gate | best reported test `+0.39` bps with validation `-40.85` bps | Order-flow/spread/volatility features do not rescue timing as a linear rule |
 
 The professor robustness table does find pair/spread definitions where no-cost and 0.25-spread results are strongly positive, while 0.50-spread taker costs often erase the edge. That is the main empirical evidence that execution quality is now the central research question.
 
@@ -168,5 +171,11 @@ shape: the current top-5 holdings basket loses in train, validation, and test;
 the sign-flip and always-long controls are better on the test period.  Therefore
 the current final policy remains no-trade for both strict arbitrage and the
 tested active timing rule.
+
+The Baruch lecture-note refinement was tested as a linear XLK-only timing model
+using basket premium, quote imbalance, signed order flow, spread state,
+realized volatility, and a Kyle-style liquidity proxy.  The useful takeaway is
+diagnostic rather than profitable: the features highlight when costs and
+volatility are hostile, but no tested horizon passes the validation gate.
 
 Reference PDFs are intentionally kept local and are not pushed to GitHub.
