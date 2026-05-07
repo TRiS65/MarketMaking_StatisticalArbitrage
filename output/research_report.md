@@ -116,6 +116,84 @@ OU and stationarity diagnostics:
 | XLK-APH  | price_regression_residual |     0.469717  |                  3924.34  |               3924.34  |               3227.03  |
 | XLK-INTC | cum_residual_return       |     0.484839  |                  1744.2   |               1744.2   |                170.465 |
 
+## Top-20 Method Diagnostics
+
+The new top-20 method diagnostic layer absorbs the methodology addendum critically rather than copying it wholesale.  It is real-data only, has no synthetic fallback, uses lagged Kalman beta, charges passive-entry adverse selection, writes every tried rule to a trial registry, and applies a no-trade selection gate.
+
+| method         |   selected_pairs |   gate_pass_pairs |   raw_validation_net_bps |   raw_test_net_bps |   raw_positive_test_pairs |   gate_test_net_bps |   gate_positive_test_pairs |   test_trades |
+|:---------------|-----------------:|------------------:|-------------------------:|-------------------:|--------------------------:|--------------------:|---------------------------:|--------------:|
+| baseline       |               19 |                 0 |               -1494.03   |         -14985.1   |                         0 |                   0 |                          0 |          2578 |
+| coint_filter   |                1 |                 0 |                 211.669  |           -188.991 |                         0 |                   0 |                          0 |            94 |
+| combined       |                1 |                 0 |                 -47.3034 |           -428.482 |                         0 |                   0 |                          0 |            74 |
+| kalman_lagged  |               19 |                 0 |               -3911.12   |         -15984.3   |                         1 |                   0 |                          0 |          3097 |
+| passive_stress |               19 |                 0 |                 190.568  |         -12166.2   |                         0 |                   0 |                          0 |          2794 |
+| sscore_ou_gate |               19 |                 0 |                -417.602  |          -9747.57  |                         1 |                   0 |                          0 |          1394 |
+
+No-trade gate examples:
+
+| pair_or_basket   | method         |   validation_net_bps |   test_net_bps |   test_2x_cost_net_bps |   test_latency1_net_bps | gate_selected_flag   | gate_reason       |
+|:-----------------|:---------------|---------------------:|---------------:|-----------------------:|------------------------:|:---------------------|:------------------|
+| XLK-AAPL         | baseline       |             105.403  |       -383.41  |               -707.839 |                -336.901 | False                | 2x_cost_net<0     |
+| XLK-AAPL         | kalman_lagged  |             -17.6244 |       -219.106 |               -545.841 |                -168.892 | False                | validation_net<=0 |
+| XLK-AAPL         | passive_stress |              27.3768 |       -134.35  |               -252.814 |                -225.334 | False                | 2x_cost_net<0     |
+| XLK-AAPL         | sscore_ou_gate |              13.2468 |       -272.16  |               -349.561 |                -257.436 | False                | cost_share>=0.75  |
+| XLK-ADI          | baseline       |            -207.517  |       -700.336 |              -1132.04  |                -719.518 | False                | validation_net<=0 |
+| XLK-ADI          | kalman_lagged  |            -367.706  |      -1318.1   |              -2131.54  |               -1483.56  | False                | validation_net<=0 |
+| XLK-ADI          | passive_stress |            -100.894  |       -622.953 |               -880.086 |                -746.962 | False                | validation_net<=0 |
+| XLK-ADI          | sscore_ou_gate |             -15.8548 |       -454.272 |               -673.804 |                -457.058 | False                | validation_net<=0 |
+| XLK-AMAT         | baseline       |            -126.116  |      -2745.56  |              -3938.8   |               -3039.6   | False                | validation_net<=0 |
+| XLK-AMAT         | kalman_lagged  |             -97.532  |      -2438.48  |              -3614.42  |               -2683.7   | False                | validation_net<=0 |
+| XLK-AMAT         | passive_stress |             154.552  |      -2122.05  |              -2712.06  |               -2751.63  | False                | 2x_cost_net<0     |
+| XLK-AMAT         | sscore_ou_gate |             -95.766  |       -524.69  |              -1018.16  |                -595.809 | False                | validation_net<=0 |
+| XLK-AMD          | baseline       |              18.2845 |       -715.543 |              -1409.96  |                -708.834 | False                | cost_share>=0.75  |
+| XLK-AMD          | kalman_lagged  |             118.643  |       -381.47  |               -814.053 |                -384.993 | False                | 2x_cost_net<0     |
+| XLK-AMD          | passive_stress |             157.773  |       -457.97  |               -788.469 |                -858.389 | False                | 2x_cost_net<0     |
+
+Exit-reason audit:
+
+| method   | sample     | exit_reason   |   trades |   gross_bps |   cost_bps |   net_bps |
+|:---------|:-----------|:--------------|---------:|------------:|-----------:|----------:|
+| baseline | train      | eod           |       44 |     60.4524 |   181.074  | -120.622  |
+| baseline | train      | max_hold      |       99 |    -60.6224 |   283.244  | -343.866  |
+| baseline | train      | reversion     |       49 |    397.297  |   260.131  |  137.167  |
+| baseline | train      | stop_loss     |       79 |   -186.499  |   277.851  | -464.35   |
+| baseline | validation | eod           |       10 |     22.8702 |    67.0539 |  -44.1837 |
+| baseline | validation | max_hold      |       28 |     15.7636 |    55.798  |  -40.0344 |
+| baseline | validation | reversion     |       12 |    164.494  |    43.7627 |  120.731  |
+| baseline | test       | eod           |       28 |    -29.5534 |   114.659  | -144.212  |
+| baseline | test       | max_hold      |       74 |    -33.0371 |   161.383  | -194.42   |
+| baseline | test       | reversion     |       42 |    461.501  |   215.217  |  246.284  |
+| baseline | test       | stop_loss     |       36 |   -129.222  |   107.962  | -237.184  |
+| baseline | train      | eod           |       44 |     60.4524 |   181.074  | -120.622  |
+| baseline | train      | max_hold      |      102 |    -71.2094 |   296.558  | -367.768  |
+| baseline | train      | reversion     |       49 |    397.297  |   260.131  |  137.167  |
+| baseline | validation | eod           |       10 |     22.8702 |    67.0539 |  -44.1837 |
+
+XLK-only signal bucket test:
+
+| sample   |   horizon_min |   signal_decile |   mean_future_return_bps |   count |
+|:---------|--------------:|----------------:|-------------------------:|--------:|
+| train    |             1 |               0 |               0.0322569  |    2243 |
+| train    |             1 |               1 |               0.120788   |    2242 |
+| train    |             1 |               2 |              -0.185557   |    2242 |
+| train    |             1 |               3 |              -0.157853   |    2242 |
+| train    |             1 |               4 |              -0.00427357 |    2243 |
+| train    |             1 |               5 |              -0.105299   |    2242 |
+| train    |             1 |               6 |              -0.0206658  |    2242 |
+| train    |             1 |               7 |              -0.150865   |    2242 |
+| train    |             1 |               8 |               0.0109971  |    2242 |
+| train    |             1 |               9 |               0.0977812  |    2243 |
+| train    |             5 |               0 |               0.39215    |    2243 |
+| train    |             5 |               1 |              -0.214831   |    2242 |
+| train    |             5 |               2 |              -0.462747   |    2242 |
+| train    |             5 |               3 |              -0.492115   |    2242 |
+| train    |             5 |               4 |              -0.465029   |    2243 |
+| train    |             5 |               5 |              -0.656002   |    2242 |
+| train    |             5 |               6 |              -0.271281   |    2242 |
+| train    |             5 |               7 |              -0.27493    |    2242 |
+| train    |             5 |               8 |              -0.0365918  |    2242 |
+| train    |             5 |               9 |               0.711996   |    2243 |
+
 ## Sparse Market-Neutral Basket
 
 | subset                  |   k | betas                                                      |   train_adf_p |   train_half_life_minutes |   train_avg_oneway_cost_bps |    score |
@@ -205,11 +283,11 @@ The next report should avoid saying "ETF arbitrage is profitable" unless a marke
 
 ## Next Steps
 
-1. Finish the full-grid alpha suite after verifying quick-run results.
-2. Add passive maker/taker fill probabilities instead of fixed spread fractions.
-3. Extend OU/s-score trading from diagnostics into rule selection.
-4. Add dynamic hedge beta, likely Kalman-filter or rolling regression.
-5. Add portfolio-level drawdown / VaR constraints for correlated constituent losses.
+1. Run the full grid overnight; the committed top-20 diagnostic grid is intentionally laptop-safe.
+2. Improve passive execution with queue-depth and partial-fill modeling; the current passive mode is only a stress case.
+3. Extend signal bucket tests into formal timing selection only if the decile relation is stable across train/validation/test.
+4. Add portfolio-level drawdown / VaR constraints for correlated constituent losses.
+5. Add a formal DSR / multiple-testing section using the trial registry as the denominator.
 
 ## Reproducibility
 

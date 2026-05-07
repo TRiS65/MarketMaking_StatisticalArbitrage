@@ -1,0 +1,7 @@
+method,selected_pairs,gate_pass_pairs,raw_validation_net_bps,raw_test_net_bps,raw_positive_test_pairs,gate_test_net_bps,gate_positive_test_pairs,test_trades
+baseline,19,0,-1494.032201477021,-14985.05153125544,0,0.0,0,2578
+coint_filter,1,0,211.6691660786419,-188.99068364902658,0,0.0,0,94
+combined,1,0,-47.303405839250104,-428.48170556028657,0,0.0,0,74
+kalman_lagged,19,0,-3911.1215131735385,-15984.276841205885,1,0.0,0,3097
+passive_stress,19,0,190.56787455269784,-12166.221532462245,0,0.0,0,2794
+sscore_ou_gate,19,0,-417.60238152012585,-9747.572533008897,1,0.0,0,1394

@@ -78,6 +78,10 @@ def markdown_report() -> Path:
     robust_cost = read_optional("robust_alpha_cost_sensitivity.csv")
     timing = read_optional("timing_extension_summary.csv")
     timing_bidask = read_optional("timing_extension_bidask_comparison.csv")
+    top20_methods = read_optional("top20_method_comparison_summary.csv")
+    top20_gate = read_optional("top20_no_trade_gate.csv")
+    top20_buckets = read_optional("top20_signal_bucket.csv")
+    top20_exits = read_optional("top20_exit_reason_audit.csv")
 
     text = f"""# XLK Microstructure Statistical Arbitrage: New-Data Progress Report
 
@@ -123,6 +127,24 @@ OU and stationarity diagnostics:
 
 {md_table(professor_ou, ['pair', 'spread_type', 'train_adf_p', 'train_half_life_minutes', 'ou_half_life_minutes', 'train_spread_std_bps'], 15)}
 
+## Top-20 Method Diagnostics
+
+The new top-20 method diagnostic layer absorbs the methodology addendum critically rather than copying it wholesale.  It is real-data only, has no synthetic fallback, uses lagged Kalman beta, charges passive-entry adverse selection, writes every tried rule to a trial registry, and applies a no-trade selection gate.
+
+{md_table(top20_methods)}
+
+No-trade gate examples:
+
+{md_table(top20_gate, ['pair_or_basket', 'method', 'validation_net_bps', 'test_net_bps', 'test_2x_cost_net_bps', 'test_latency1_net_bps', 'gate_selected_flag', 'gate_reason'], 15)}
+
+Exit-reason audit:
+
+{md_table(top20_exits, ['method', 'sample', 'exit_reason', 'trades', 'gross_bps', 'cost_bps', 'net_bps'], 15)}
+
+XLK-only signal bucket test:
+
+{md_table(top20_buckets, ['sample', 'horizon_min', 'signal_decile', 'mean_future_return_bps', 'count'], 20)}
+
 ## Sparse Market-Neutral Basket
 
 {md_table(candidates, ['subset', 'k', 'betas', 'train_adf_p', 'train_half_life_minutes', 'train_avg_oneway_cost_bps', 'score'], 10)}
@@ -163,11 +185,11 @@ The next report should avoid saying "ETF arbitrage is profitable" unless a marke
 
 ## Next Steps
 
-1. Finish the full-grid alpha suite after verifying quick-run results.
-2. Add passive maker/taker fill probabilities instead of fixed spread fractions.
-3. Extend OU/s-score trading from diagnostics into rule selection.
-4. Add dynamic hedge beta, likely Kalman-filter or rolling regression.
-5. Add portfolio-level drawdown / VaR constraints for correlated constituent losses.
+1. Run the full grid overnight; the committed top-20 diagnostic grid is intentionally laptop-safe.
+2. Improve passive execution with queue-depth and partial-fill modeling; the current passive mode is only a stress case.
+3. Extend signal bucket tests into formal timing selection only if the decile relation is stable across train/validation/test.
+4. Add portfolio-level drawdown / VaR constraints for correlated constituent losses.
+5. Add a formal DSR / multiple-testing section using the trial registry as the denominator.
 
 ## Reproducibility
 
@@ -188,6 +210,8 @@ def pdf_report() -> Path:
     robust_selection = read_optional("robust_alpha_selection.csv")
     robust_controls = read_optional("robust_alpha_controls.csv")
     timing = read_optional("timing_extension_summary.csv")
+    top20_methods = read_optional("top20_method_comparison_summary.csv")
+    top20_gate = read_optional("top20_no_trade_gate.csv")
     sparse_bidask = read_optional("enhanced_sparse_bidask_comparison.csv")
 
     styles = getSampleStyleSheet()
@@ -206,9 +230,11 @@ def pdf_report() -> Path:
     table_story(story, "Professor Cost/Spread Leaderboard", professor, ["pair", "spread_type", "no_cost_midpoint", "quarter_spread_cost", "half_spread_taker_cost", "clipped_last_trade_proxy"], styles, 2, 12)
     table_story(story, "Sparse Bid/Ask Audit", sparse_bidask, ["sample", "old_net_bps", "new_bidask_cost_bps", "new_bidask_net_bps"], styles, 2, 8)
     table_story(story, "Robust Alpha Selection", robust_selection, ["decision", "economic_label", "selected_strategy", "train_net_bps", "test_net_bps"], styles, 2, 5)
+    table_story(story, "Top-20 Method Diagnostics", top20_methods, ["method", "selected_pairs", "gate_pass_pairs", "raw_test_net_bps", "gate_test_net_bps", "test_trades"], styles, 2, 8)
+    table_story(story, "No-Trade Gate Examples", top20_gate, ["pair_or_basket", "method", "validation_net_bps", "test_net_bps", "gate_selected_flag", "gate_reason"], styles, 2, 10)
     table_story(story, "Robust Alpha Controls", robust_controls, ["control", "train_net_bps", "test_net_bps", "test_trades"], styles, 2, 8)
     table_story(story, "XLK-Only Timing", timing, ["period", "gross_bps", "cost_bps", "net_bps", "trades"], styles, 2, 8)
-    for fig_name in ["professor_cost_scenario_leaderboard.png", "robust_alpha_selected_cumulative.png", "timing_extension_cumulative_net.png"]:
+    for fig_name in ["professor_cost_scenario_leaderboard.png", "top20_method_comparison.png", "top20_signal_bucket.png", "robust_alpha_selected_cumulative.png", "timing_extension_cumulative_net.png"]:
         fig = FIGURES / fig_name
         if fig.exists():
             story.append(Image(fig.as_posix(), width=6.8 * inch, height=3.8 * inch))

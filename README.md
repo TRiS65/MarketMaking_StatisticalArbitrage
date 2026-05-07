@@ -38,6 +38,7 @@ The raw build scans more than 90GB of gzipped TAQ data, so it is intentionally s
 | `scripts/project_config.py` | Shared dataset metadata, universe, and split dates |
 | `scripts/research_utils.py` | Shared panel alignment, returns, OU, last-trade proxy, and spread helpers |
 | `scripts/run_professor_robustness.py` | Spread-definition and transaction-cost robustness requested by professor |
+| `scripts/run_top20_method_diagnostics.py` | Real-only top-20 pair diagnostics with no-trade gate, lagged Kalman beta, passive stress, exit reasons, and signal buckets |
 | `scripts/run_robust_alpha_suite.py` | Joint optimizer for XLK-only timing and partial/full hedge variants |
 | `scripts/run_final_analysis.py` | Sparse market-neutral basket benchmark |
 | `scripts/run_timing_extension.py` | XLK-only timing extension using top-holdings basket premium |
@@ -102,6 +103,11 @@ The new diagnostics include OU/Avellaneda-Lee style mean-reversion scores. The n
 | `output/tables/professor_test_leaderboard.csv` | Validation-selected test results by spread and cost scenario |
 | `output/tables/professor_cost_scenario_results.csv` | Full spread/cost scenario results |
 | `output/tables/professor_ou_spread_diagnostics.csv` | ADF, half-life, and OU diagnostics |
+| `output/tables/top20_trial_registry.csv` | Every top-20 pair-method trial and selection flag |
+| `output/tables/top20_method_comparison_summary.csv` | Method ablation after validation selection and no-trade gate |
+| `output/tables/top20_no_trade_gate.csv` | Why selected active pair rules are accepted or rejected |
+| `output/tables/top20_exit_reason_audit.csv` | Reversion/max-hold/stop-loss/EOD exit reason P&L |
+| `output/tables/top20_signal_bucket.csv` | Sparse-basket signal deciles vs future XLK returns |
 | `output/tables/robust_alpha_selection.csv` | Train-only robust alpha selection decision |
 | `output/tables/robust_alpha_controls.csv` | Sign-flip, always-long/short, circular-shift controls |
 | `output/tables/robust_alpha_cost_sensitivity.csv` | Cost multiplier sensitivity |
@@ -124,7 +130,14 @@ The first new-data quick run gives a more conservative conclusion than the old J
 | Sparse market-neutral basket, bid/ask boundary audit | train `-26.14` bps | test `-125.45` bps | Fails after stricter execution accounting |
 | Fixed top-holdings XLK-only timing | validation `+205.74` bps | test `-852.43` bps | Old fixed timing rule does not transfer |
 | Robust alpha quick selected XLK-only timing | train `+472.55` bps | test `-17.73` bps | Better than fixed rule, but no-trade still wins test |
+| Top-20 pair method diagnostics after no-trade gate | varies | `0.00` bps | Every validation-selected pair method fails at least one gate |
 
 The professor robustness table does find pair/spread definitions where no-cost and 0.25-spread results are strongly positive, while 0.50-spread taker costs often erase the edge. That is the main empirical evidence that execution quality is now the central research question.
+
+The top-20 method diagnostics absorb the methodology addendum conservatively:
+there is no synthetic fallback, Kalman beta is lagged, passive entries include
+adverse selection, and each trial is registered.  The combined filters reduce
+some losses, but they do not create a tradable pair alpha in the expanded sample.
+The no-trade gate rejects all selected pair rules.
 
 Reference PDFs are intentionally kept local and are not pushed to GitHub.
