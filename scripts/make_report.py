@@ -93,6 +93,9 @@ def markdown_report() -> Path:
     micro_refine = read_optional("microstructure_refinement_horizon_summary.csv")
     micro_refine_controls = read_optional("microstructure_refinement_controls.csv")
     micro_refine_coef = read_optional("microstructure_refinement_coefficients.csv")
+    timing_robust_decision = read_optional("timing_robustness_decision.csv")
+    timing_robust_target = read_optional("timing_robustness_target_rule.csv")
+    timing_robust_target_exec = read_optional("timing_robustness_target_execution_audit.csv")
 
     text = f"""# XLK Microstructure Statistical Arbitrage: New-Data Progress Report
 
@@ -212,6 +215,22 @@ Largest ridge coefficients:
 
 {md_table(micro_refine_coef, ['feature', 'coef'], 12)}
 
+## Current Timing Robustness Re-Audit
+
+The previously highlighted `micro_shrink_0.75_cw10d_e60_x0_mh240` result was March-only and came from an older sparse basket convention.  The script now regenerates timing robustness on the current expanded clean top-5 holdings basket and evaluates the full March-April holdout.
+
+Current Jan-Feb-selected decision:
+
+{md_table(timing_robust_decision, ['decision', 'reason', 'selected_strategy', 'train_net_bps', 'mar_net_bps', 'apr_net_bps', 'test_net_bps', 'exact_bidask_test_net_bps', 'latency1_test_net_bps'], 5)}
+
+Named candidate audit:
+
+{md_table(timing_robust_target, ['strategy', 'basket_symbols', 'train_net_bps', 'mar_net_bps', 'apr_net_bps', 'test_net_bps', 'train_trades', 'test_trades'], 5)}
+
+Named candidate execution audit:
+
+{md_table(timing_robust_target_exec, ['execution_model', 'latency_min', 'train_net_bps', 'mar_net_bps', 'apr_net_bps', 'test_net_bps', 'test_trades'], 10)}
+
 ## Sparse Market-Neutral Basket
 
 {md_table(candidates, ['subset', 'k', 'betas', 'train_adf_p', 'train_half_life_minutes', 'train_avg_oneway_cost_bps', 'score'], 10)}
@@ -288,6 +307,8 @@ def pdf_report() -> Path:
     loss_decision = read_optional("loss_streamline_decision.csv")
     fixed_bps_selection = read_optional("fixed_bps_timing_selection.csv")
     micro_refine = read_optional("microstructure_refinement_horizon_summary.csv")
+    timing_robust_decision = read_optional("timing_robustness_decision.csv")
+    timing_robust_target = read_optional("timing_robustness_target_rule.csv")
 
     styles = getSampleStyleSheet()
     out = OUTPUT / "research_report.pdf"
@@ -313,6 +334,8 @@ def pdf_report() -> Path:
     table_story(story, "Loss Streamline Decision", loss_decision, ["research_path", "decision", "test_net_bps"], styles, 2, 5)
     table_story(story, "Expanded Fixed-BPS Timing Controls", fixed_bps_selection, ["decision", "basket_symbols", "train_net_bps", "validation_net_bps", "test_net_bps", "circular_pvalue"], styles, 2, 5)
     table_story(story, "Microstructure Refinement Horizon Sweep", micro_refine, ["horizon_min", "decision", "train_net_bps", "validation_net_bps", "test_net_bps", "test_trades"], styles, 2, 8)
+    table_story(story, "Current Timing Robustness Re-Audit", timing_robust_decision, ["decision", "reason", "train_net_bps", "test_net_bps"], styles, 2, 5)
+    table_story(story, "Named Timing Candidate Re-Audit", timing_robust_target, ["strategy", "basket_symbols", "train_net_bps", "mar_net_bps", "apr_net_bps", "test_net_bps"], styles, 2, 5)
     table_story(story, "Robust Alpha Controls", robust_controls, ["control", "train_net_bps", "test_net_bps", "test_trades"], styles, 2, 8)
     table_story(story, "XLK-Only Timing", timing, ["period", "gross_bps", "cost_bps", "net_bps", "trades"], styles, 2, 8)
     for fig_name in ["professor_cost_scenario_leaderboard.png", "top20_method_comparison.png", "top20_signal_bucket.png", "robust_alpha_selected_cumulative.png", "timing_extension_cumulative_net.png"]:

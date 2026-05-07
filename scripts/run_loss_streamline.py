@@ -223,6 +223,9 @@ def main() -> None:
 
     profit = profit_search_diagnosis(safe_read(tables / "profit_search_protocol_summary.csv"), args.min_test_cost_buffer)
     fixed_bps = safe_read(tables / "fixed_bps_timing_selection.csv")
+    timing_robust = safe_read(tables / "timing_robustness_decision.csv")
+    timing_target = safe_read(tables / "timing_robustness_target_rule.csv")
+    timing_target_exec = safe_read(tables / "timing_robustness_target_execution_audit.csv")
 
     decisions = []
     # 1) Strict market-neutral / pair trading decision
@@ -286,6 +289,28 @@ def main() -> None:
             "raw_test_net_bps_before_gate": r.get("test_net_bps", np.nan),
         })
 
+    if not timing_robust.empty:
+        r = timing_robust.iloc[0]
+        decisions.append({
+            "research_path": "timing_robustness_current_selection",
+            "decision": str(r.get("decision", "no_trade")),
+            "reason": str(r.get("reason", "current timing robustness result")),
+            "train_or_validation_net_bps": r.get("train_net_bps", np.nan),
+            "test_net_bps": r.get("test_net_bps", np.nan),
+            "raw_test_net_bps_before_gate": r.get("test_net_bps", np.nan),
+        })
+
+    if not timing_target.empty:
+        r = timing_target.iloc[0]
+        decisions.append({
+            "research_path": "named_timing_candidate_micro075_e60",
+            "decision": "no_trade" if float(r.get("test_net_bps", np.nan)) <= 0 else "target_candidate_pending_controls",
+            "reason": "named candidate audited on current top-5 basket with Mar-Apr test",
+            "train_or_validation_net_bps": r.get("train_net_bps", np.nan),
+            "test_net_bps": r.get("test_net_bps", np.nan),
+            "raw_test_net_bps_before_gate": r.get("test_net_bps", np.nan),
+        })
+
     decision_df = pd.DataFrame(decisions)
     decision_df.to_csv(tables / "loss_streamline_decision.csv", index=False)
 
@@ -331,6 +356,15 @@ def main() -> None:
     lines.append("## 5. Signal-bucket regime check\n")
     lines.append(table_md(buckets, ["sample", "horizon_min", "linear_slope_bps_per_decile", "decile0_future_bps", "decile9_future_bps", "best_decile", "best_decile_future_bps"], n=30, digits=2))
     lines.append("\nInterpretation: a non-monotone or sign-flipping decile curve means the signal should not be traded as a symmetric z-score. Prefer fixed-bps thresholds, asymmetric tails, or a no-trade gate.\n")
+
+    lines.append("## 6. Current timing robustness / named candidate audit\n")
+    lines.append("Current Jan-Feb-selected timing decision:\n")
+    lines.append(table_md(timing_robust, ["decision", "reason", "selected_strategy", "train_net_bps", "mar_net_bps", "apr_net_bps", "test_net_bps", "exact_bidask_test_net_bps", "latency1_test_net_bps"], n=5, digits=2))
+    lines.append("\nNamed candidate `micro_shrink_0.75_cw10d_e60_x0_mh240` on the current top-5 basket:\n")
+    lines.append(table_md(timing_target, ["strategy", "basket_symbols", "train_net_bps", "mar_net_bps", "apr_net_bps", "test_net_bps", "train_trades", "test_trades"], n=5, digits=2))
+    lines.append("\nNamed candidate execution audit:\n")
+    lines.append(table_md(timing_target_exec, ["execution_model", "latency_min", "train_net_bps", "mar_net_bps", "apr_net_bps", "test_net_bps", "test_trades"], n=10, digits=2))
+    lines.append("\nInterpretation: this resolves the earlier contradiction. The old March-only positive timing result does not survive regeneration on the current expanded top-5 basket plus Mar-Apr holdout.\n")
 
     lines.append("## Recommended next implementation\n")
     lines.append("1. Keep market-neutral pair/basket trading behind a hard no-trade gate. Do not report it as profitable unless gate_pass_pairs > 0 and the gated test result is positive.\n")

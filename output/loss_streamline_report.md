@@ -8,6 +8,8 @@
 | robust_alpha_suite_selected         | no_trade                    | selected robust-alpha rule loses OOS or does not beat no-trade                                                                                     |                        472.55 |         -17.73 |                         -17.73 |
 | fixed_bps_xlk_only_timing_candidate | legacy_candidate_shape_only | legacy profit-search output is Jan-Feb positive, but it predates expanded top-20 controls and is not final evidence                                |                        456.48 |         613.35 |                         613.35 |
 | expanded_fixed_bps_xlk_only_timing  | no_trade                    | train_or_validation_net<=0;test_net<=0;2x_cost_test<=0;latency1_test<=0;does_not_beat_directional_control;sign_flip_not_worse;circular_pvalue>0.10 |                      -2115.46 |        -977.24 |                        -977.24 |
+| timing_robustness_current_selection | no_trade                    | No XLK-only timing rule passed Jan-Feb train filters.                                                                                              |                          0    |           0    |                           0    |
+| named_timing_candidate_micro075_e60 | no_trade                    | named candidate audited on current top-5 basket with Mar-Apr test                                                                                  |                       -142.16 |        -894.79 |                        -894.79 |
 
 ## 1. Market-neutral / pair-trading PnL attribution
 
@@ -89,6 +91,32 @@ Interpretation: a positive fixed-bps timing candidate is not the same as market-
 | validation |            60 |                         -0.01 |                -8.06 |               -20.5  |             6 |                    15.17 |
 
 Interpretation: a non-monotone or sign-flipping decile curve means the signal should not be traded as a symmetric z-score. Prefer fixed-bps thresholds, asymmetric tails, or a no-trade gate.
+
+## 6. Current timing robustness / named candidate audit
+
+Current Jan-Feb-selected timing decision:
+
+| decision   | reason                                                |   train_net_bps |   test_net_bps |
+|:-----------|:------------------------------------------------------|----------------:|---------------:|
+| no_trade   | No XLK-only timing rule passed Jan-Feb train filters. |               0 |              0 |
+
+Named candidate `micro_shrink_0.75_cw10d_e60_x0_mh240` on the current top-5 basket:
+
+| strategy                             | basket_symbols         |   train_net_bps |   mar_net_bps |   apr_net_bps |   test_net_bps |   train_trades |   test_trades |
+|:-------------------------------------|:-----------------------|----------------:|--------------:|--------------:|---------------:|---------------:|--------------:|
+| micro_shrink_0.75_cw10d_e60_x0_mh240 | NVDA AAPL MSFT AVGO MU |         -142.16 |        -32.45 |       -862.35 |        -894.79 |            128 |           151 |
+
+Named candidate execution audit:
+
+| execution_model   |   latency_min |   train_net_bps |   mar_net_bps |   apr_net_bps |   test_net_bps |   test_trades |
+|:------------------|--------------:|----------------:|--------------:|--------------:|---------------:|--------------:|
+| halfspread        |             0 |         -142.16 |        -32.45 |       -862.35 |        -894.79 |           151 |
+| exact_bidask      |             0 |         -142.19 |        -32.4  |       -862.35 |        -894.76 |           151 |
+| exact_bidask      |             1 |         -120.78 |       -176.54 |       -913.67 |       -1090.22 |           152 |
+| exact_bidask      |             2 |         -319.42 |         88.61 |       -841.82 |        -753.22 |           152 |
+| exact_bidask      |             5 |         -267.18 |        -20.35 |       -866.28 |        -886.63 |           152 |
+
+Interpretation: this resolves the earlier contradiction. The old March-only positive timing result does not survive regeneration on the current expanded top-5 basket plus Mar-Apr holdout.
 
 ## Recommended next implementation
 

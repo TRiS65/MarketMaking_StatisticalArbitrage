@@ -3,3 +3,5 @@ market_neutral_pair_or_basket,no_trade,validation-selected active pair/basket ru
 robust_alpha_suite_selected,no_trade,selected robust-alpha rule loses OOS or does not beat no-trade,472.5459568673186,-17.72538874632618,-17.72538874632618
 fixed_bps_xlk_only_timing_candidate,legacy_candidate_shape_only,"legacy profit-search output is Jan-Feb positive, but it predates expanded top-20 controls and is not final evidence",456.47909374165073,613.3530614958253,613.3530614958253
 expanded_fixed_bps_xlk_only_timing,no_trade,train_or_validation_net<=0;test_net<=0;2x_cost_test<=0;latency1_test<=0;does_not_beat_directional_control;sign_flip_not_worse;circular_pvalue>0.10,-2115.4579442410177,-977.2390831260766,-977.2390831260766
+timing_robustness_current_selection,no_trade,No XLK-only timing rule passed Jan-Feb train filters.,0.0,0.0,0.0
+named_timing_candidate_micro075_e60,no_trade,named candidate audited on current top-5 basket with Mar-Apr test,-142.15963336817242,-894.7909209969378,-894.7909209969378

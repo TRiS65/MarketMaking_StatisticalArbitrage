@@ -289,6 +289,8 @@ The maker/taker execution backtest is intentionally treated as a candidate scree
 | robust_alpha_suite_selected         | no_trade                    | selected robust-alpha rule loses OOS or does not beat no-trade                                                                                     |                       472.546 |       -17.7254 |                       -17.7254 |
 | fixed_bps_xlk_only_timing_candidate | legacy_candidate_shape_only | legacy profit-search output is Jan-Feb positive, but it predates expanded top-20 controls and is not final evidence                                |                       456.479 |       613.353  |                       613.353  |
 | expanded_fixed_bps_xlk_only_timing  | no_trade                    | train_or_validation_net<=0;test_net<=0;2x_cost_test<=0;latency1_test<=0;does_not_beat_directional_control;sign_flip_not_worse;circular_pvalue>0.10 |                     -2115.46  |      -977.239  |                      -977.239  |
+| timing_robustness_current_selection | no_trade                    | No XLK-only timing rule passed Jan-Feb train filters.                                                                                              |                         0     |         0      |                         0      |
+| named_timing_candidate_micro075_e60 | no_trade                    | named candidate audited on current top-5 basket with Mar-Apr test                                                                                  |                      -142.16  |      -894.791  |                      -894.791  |
 
 ## Fixed-BPS Timing Controls on Expanded Data
 
@@ -359,6 +361,32 @@ Largest ridge coefficients:
 | signed_flow_5     | -0.308216  |
 | xlk_spread_bps    |  0.149119  |
 | roll_premium_bps  | -0.0451124 |
+
+## Current Timing Robustness Re-Audit
+
+The previously highlighted `micro_shrink_0.75_cw10d_e60_x0_mh240` result was March-only and came from an older sparse basket convention.  The script now regenerates timing robustness on the current expanded clean top-5 holdings basket and evaluates the full March-April holdout.
+
+Current Jan-Feb-selected decision:
+
+| decision   | reason                                                |   train_net_bps |   test_net_bps |
+|:-----------|:------------------------------------------------------|----------------:|---------------:|
+| no_trade   | No XLK-only timing rule passed Jan-Feb train filters. |               0 |              0 |
+
+Named candidate audit:
+
+| strategy                             | basket_symbols         |   train_net_bps |   mar_net_bps |   apr_net_bps |   test_net_bps |   train_trades |   test_trades |
+|:-------------------------------------|:-----------------------|----------------:|--------------:|--------------:|---------------:|---------------:|--------------:|
+| micro_shrink_0.75_cw10d_e60_x0_mh240 | NVDA AAPL MSFT AVGO MU |         -142.16 |      -32.4451 |      -862.346 |       -894.791 |            128 |           151 |
+
+Named candidate execution audit:
+
+| execution_model   |   latency_min |   train_net_bps |   mar_net_bps |   apr_net_bps |   test_net_bps |   test_trades |
+|:------------------|--------------:|----------------:|--------------:|--------------:|---------------:|--------------:|
+| halfspread        |             0 |        -142.16  |      -32.4451 |      -862.346 |       -894.791 |           151 |
+| exact_bidask      |             0 |        -142.194 |      -32.4045 |      -862.355 |       -894.759 |           151 |
+| exact_bidask      |             1 |        -120.777 |     -176.543  |      -913.675 |      -1090.22  |           152 |
+| exact_bidask      |             2 |        -319.421 |       88.6059 |      -841.822 |       -753.217 |           152 |
+| exact_bidask      |             5 |        -267.18  |      -20.3491 |      -866.279 |       -886.628 |           152 |
 
 ## Sparse Market-Neutral Basket
 
