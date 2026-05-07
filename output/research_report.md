@@ -388,6 +388,50 @@ Named candidate execution audit:
 | exact_bidask      |             2 |        -319.421 |       88.6059 |      -841.822 |       -753.217 |           152 |
 | exact_bidask      |             5 |        -267.18  |      -20.3491 |      -866.279 |       -886.628 |           152 |
 
+## Regime Shift Diagnostics
+
+The regime-shift check asks whether poor timing performance comes from a broken XLK/basket linkage, wider execution costs, or a directional signal failure.  The expanded-sample evidence points mainly to signal-direction instability: XLK/basket correlation and beta do not collapse, but April is a strong XLK rally in which the positive premium stays persistent and the contrarian rule remains short XLK for too long.
+
+Train-vs-test regime summary:
+
+| metric                     |   train_avg |    test_avg |   test_minus_train |
+|:---------------------------|------------:|------------:|-------------------:|
+| xlk_basket_corr_1m         |   0.655138  |   0.634166  |        -0.020972   |
+| xlk_on_basket_beta_1m      |   0.614184  |   0.616637  |         0.00245218 |
+| residual_vol_bps_1m        |   4.98373   |   5.12345   |         0.139715   |
+| median_xlk_spread_bps      |   0.709236  |   1.02276   |         0.313526   |
+| signal_std_bps             | 114.473     | 150.386     |        35.9131     |
+| alpha_ic_5m                |  -0.0113578 |   0.0286324 |         0.0399902  |
+| contrarian_decile_edge_5m  |  -1.9271    |   2.3787    |         4.3058     |
+| alpha_ic_15m               |  -0.0322288 |   0.0413642 |         0.073593   |
+| contrarian_decile_edge_15m |  -6.90304   |   5.88396   |        12.787      |
+| alpha_ic_30m               |  -0.0590983 |   0.053977  |         0.113075   |
+| contrarian_decile_edge_30m | -13.0812    |  10.2419    |        23.3231     |
+| alpha_ic_60m               |  -0.0777925 |   0.0789449 |         0.156737   |
+| contrarian_decile_edge_60m | -21.0606    |  21.9551    |        43.0156     |
+
+Monthly market state:
+
+| month   |   xlk_return_bps |   basket_return_bps |   xlk_basket_corr_1m |   xlk_on_basket_beta_1m |   residual_vol_bps_1m |   median_xlk_spread_bps |   signal_std_bps |   abs_signal_gt_60_frac |
+|:--------|-----------------:|--------------------:|---------------------:|------------------------:|----------------------:|------------------------:|-----------------:|------------------------:|
+| 2025-11 |         -248.124 |            -246.401 |             0.776102 |                0.726364 |               4.87309 |                1.02988  |         173.251  |                0.654751 |
+| 2025-12 |         -133.084 |            -179.869 |             0.594055 |                0.498026 |               4.20812 |                1.37146  |        2167.73   |                0.918706 |
+| 2026-01 |         -295.7   |            -244.169 |             0.601841 |                0.516993 |               4.40605 |                0.694227 |          93.6499 |                0.628137 |
+| 2026-02 |         -309.429 |            -409.318 |             0.708435 |                0.711376 |               5.56141 |                0.724244 |         135.297  |                0.775649 |
+| 2026-03 |         -292.892 |            -346.281 |             0.665573 |                0.679319 |               5.52103 |                0.773664 |         183.382  |                0.820896 |
+| 2026-04 |         1262.86  |            1321.4   |             0.602759 |                0.553954 |               4.72586 |                1.27186  |         117.391  |                0.846362 |
+
+Named timing candidate monthly PnL anatomy:
+
+| month   |   gross_bps |   cost_bps |    net_bps |   trades |   long_gross_bps |   short_gross_bps |   long_minutes |   short_minutes |
+|:--------|------------:|-----------:|-----------:|---------:|-----------------:|------------------:|---------------:|----------------:|
+| 2025-11 |   -578.952  |    326.161 |  -905.113  |       62 |        -463.509  |         -115.444  |           4584 |            1342 |
+| 2025-12 |   -961.783  |    285.366 | -1247.15   |       84 |        -567.937  |         -393.845  |           4643 |            3426 |
+| 2026-01 |    -22.7232 |    144.013 |  -166.736  |       58 |        -171.264  |          148.54   |            627 |            4973 |
+| 2026-02 |    167.889  |    143.347 |    24.5423 |       70 |         -29.7541 |          197.643  |           3852 |            2861 |
+| 2026-03 |    156.568  |    188.972 |   -32.4045 |       76 |         101.566  |           55.0019 |           4216 |            3046 |
+| 2026-04 |   -724.159  |    138.195 |  -862.355  |       75 |         126.882  |         -851.041  |           1010 |            6420 |
+
 ## Sparse Market-Neutral Basket
 
 | subset                  |   k | betas                                                      |   train_adf_p |   train_half_life_minutes |   train_avg_oneway_cost_bps |    score |
@@ -484,6 +528,7 @@ The next report should avoid saying "ETF arbitrage is profitable" unless a marke
 5. Add a formal DSR / multiple-testing section using the trial registry as the denominator.
 6. Regenerate the fixed-bps sparse5 timing candidate on the expanded top-20 sample before using it as final evidence; legacy profit-search outputs are candidate shapes only.
 7. If pursuing a positive extension, move from linear microstructure timing to conditional gates: avoid high spread / high volatility states, trade only where order-flow and basket-premium signs agree, and validate on event-level fills.
+8. Add a trend/regime gate before any contrarian XLK-only timing claim.  The April audit shows that persistent positive premium during an aligned XLK/basket rally can make the strategy short the ETF into a strong uptrend; this should trigger no-trade or one-sided trading restrictions.
 
 ## Reproducibility
 

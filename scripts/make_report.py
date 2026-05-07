@@ -96,6 +96,9 @@ def markdown_report() -> Path:
     timing_robust_decision = read_optional("timing_robustness_decision.csv")
     timing_robust_target = read_optional("timing_robustness_target_rule.csv")
     timing_robust_target_exec = read_optional("timing_robustness_target_execution_audit.csv")
+    regime_summary = read_optional("regime_shift_summary.csv")
+    regime_market = read_optional("regime_monthly_market_state.csv")
+    regime_pnl = read_optional("regime_target_rule_monthly_pnl.csv")
 
     text = f"""# XLK Microstructure Statistical Arbitrage: New-Data Progress Report
 
@@ -231,6 +234,22 @@ Named candidate execution audit:
 
 {md_table(timing_robust_target_exec, ['execution_model', 'latency_min', 'train_net_bps', 'mar_net_bps', 'apr_net_bps', 'test_net_bps', 'test_trades'], 10)}
 
+## Regime Shift Diagnostics
+
+The regime-shift check asks whether poor timing performance comes from a broken XLK/basket linkage, wider execution costs, or a directional signal failure.  The expanded-sample evidence points mainly to signal-direction instability: XLK/basket correlation and beta do not collapse, but April is a strong XLK rally in which the positive premium stays persistent and the contrarian rule remains short XLK for too long.
+
+Train-vs-test regime summary:
+
+{md_table(regime_summary, ['metric', 'train_avg', 'test_avg', 'test_minus_train'], 20)}
+
+Monthly market state:
+
+{md_table(regime_market, ['month', 'xlk_return_bps', 'basket_return_bps', 'xlk_basket_corr_1m', 'xlk_on_basket_beta_1m', 'residual_vol_bps_1m', 'median_xlk_spread_bps', 'signal_std_bps', 'abs_signal_gt_60_frac'], 10)}
+
+Named timing candidate monthly PnL anatomy:
+
+{md_table(regime_pnl, ['month', 'gross_bps', 'cost_bps', 'net_bps', 'trades', 'long_gross_bps', 'short_gross_bps', 'long_minutes', 'short_minutes'], 10)}
+
 ## Sparse Market-Neutral Basket
 
 {md_table(candidates, ['subset', 'k', 'betas', 'train_adf_p', 'train_half_life_minutes', 'train_avg_oneway_cost_bps', 'score'], 10)}
@@ -278,6 +297,7 @@ The next report should avoid saying "ETF arbitrage is profitable" unless a marke
 5. Add a formal DSR / multiple-testing section using the trial registry as the denominator.
 6. Regenerate the fixed-bps sparse5 timing candidate on the expanded top-20 sample before using it as final evidence; legacy profit-search outputs are candidate shapes only.
 7. If pursuing a positive extension, move from linear microstructure timing to conditional gates: avoid high spread / high volatility states, trade only where order-flow and basket-premium signs agree, and validate on event-level fills.
+8. Add a trend/regime gate before any contrarian XLK-only timing claim.  The April audit shows that persistent positive premium during an aligned XLK/basket rally can make the strategy short the ETF into a strong uptrend; this should trigger no-trade or one-sided trading restrictions.
 
 ## Reproducibility
 
@@ -309,6 +329,7 @@ def pdf_report() -> Path:
     micro_refine = read_optional("microstructure_refinement_horizon_summary.csv")
     timing_robust_decision = read_optional("timing_robustness_decision.csv")
     timing_robust_target = read_optional("timing_robustness_target_rule.csv")
+    regime_summary = read_optional("regime_shift_summary.csv")
 
     styles = getSampleStyleSheet()
     out = OUTPUT / "research_report.pdf"
@@ -336,9 +357,10 @@ def pdf_report() -> Path:
     table_story(story, "Microstructure Refinement Horizon Sweep", micro_refine, ["horizon_min", "decision", "train_net_bps", "validation_net_bps", "test_net_bps", "test_trades"], styles, 2, 8)
     table_story(story, "Current Timing Robustness Re-Audit", timing_robust_decision, ["decision", "reason", "train_net_bps", "test_net_bps"], styles, 2, 5)
     table_story(story, "Named Timing Candidate Re-Audit", timing_robust_target, ["strategy", "basket_symbols", "train_net_bps", "mar_net_bps", "apr_net_bps", "test_net_bps"], styles, 2, 5)
+    table_story(story, "Regime Shift Summary", regime_summary, ["metric", "train_avg", "test_avg", "test_minus_train"], styles, 2, 12)
     table_story(story, "Robust Alpha Controls", robust_controls, ["control", "train_net_bps", "test_net_bps", "test_trades"], styles, 2, 8)
     table_story(story, "XLK-Only Timing", timing, ["period", "gross_bps", "cost_bps", "net_bps", "trades"], styles, 2, 8)
-    for fig_name in ["professor_cost_scenario_leaderboard.png", "top20_method_comparison.png", "top20_signal_bucket.png", "robust_alpha_selected_cumulative.png", "timing_extension_cumulative_net.png"]:
+    for fig_name in ["professor_cost_scenario_leaderboard.png", "top20_method_comparison.png", "top20_signal_bucket.png", "regime_shift_diagnostics.png", "robust_alpha_selected_cumulative.png", "timing_extension_cumulative_net.png"]:
         fig = FIGURES / fig_name
         if fig.exists():
             story.append(Image(fig.as_posix(), width=6.8 * inch, height=3.8 * inch))
