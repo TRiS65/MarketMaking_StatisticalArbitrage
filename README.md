@@ -45,6 +45,7 @@ The raw build scans more than 90GB of gzipped TAQ data, so it is intentionally s
 | `scripts/run_timing_robustness.py` | Current top-5 XLK-only timing robustness with Mar-Apr holdout and exact bid/ask latency audit |
 | `scripts/run_regime_shift_diagnostics.py` | Regime-shift audit explaining whether poor timing comes from linkage, costs, or signal direction |
 | `scripts/run_regime_gate_experiments.py` | Trend/premium-persistence no-trade gates for the April timing failure |
+| `scripts/run_regime_classifier.py` | Supervised mean-reversion / trend-continuation / no-trade classifier |
 | `scripts/run_microstructure_signal_refinement.py` | Lecture-driven order-flow/spread/volatility/impact feature timing screen |
 | `scripts/run_loss_streamline.py` | Table-driven loss attribution and active/no-trade policy summary |
 | `scripts/run_robust_alpha_suite.py` | Joint optimizer for XLK-only timing and partial/full hedge variants |
@@ -127,6 +128,8 @@ The new diagnostics include OU/Avellaneda-Lee style mean-reversion scores. The n
 | `output/tables/regime_target_rule_monthly_pnl.csv` | Monthly gross/cost/net attribution for the named timing candidate |
 | `output/tables/regime_gate_selection.csv` | Jan-Feb-selected regime gate and Mar-Apr holdout audit |
 | `output/tables/regime_gate_monthly.csv` | Monthly side anatomy for baseline, side-only diagnostics, and selected/best gates |
+| `output/tables/regime_classifier_selection.csv` | Supervised classifier selection and Mar-Apr holdout audit |
+| `output/tables/regime_classifier_controls.csv` | Sign-flip and active directional controls for selected classifier |
 | `output/tables/microstructure_refinement_horizon_summary.csv` | Order-flow/spread/volatility/impact timing horizon sweep |
 | `output/tables/loss_streamline_decision.csv` | Final active/no-trade policy summary by research path |
 | `output/tables/robust_alpha_selection.csv` | Train-only robust alpha selection decision |
@@ -158,6 +161,7 @@ The first new-data quick run gives a more conservative conclusion than the old J
 | Named timing candidate `micro_shrink_0.75_cw10d_e60_x0_mh240` | train `-142.16` bps | Mar-Apr `-894.79` bps | March-only positive result does not survive April/current basket |
 | Regime-shift audit | corr `0.655` train vs `0.634` test; beta `0.614` vs `0.617` | April short gross `-851` bps before costs | Linkage does not collapse; April is a directional/signal-regime failure |
 | Regime-gate repair | selected Jan-Feb gate train `+373.61` bps | Mar-Apr `-131.36` bps, 2x cost `-210.74` bps | Premium-persistence gates reduce April damage but do not pass final active gate |
+| Supervised regime classifier | Feb validation `+114.63` bps | Mar-Apr `-982.51` bps, 2x cost `-1790.10` bps | Learns some validation states but fails holdout and costs; no active claim |
 | Microstructure feature timing refinement | no horizon passes validation gate | best reported test `+0.39` bps with validation `-40.85` bps | Order-flow/spread/volatility features do not rescue timing as a linear rule |
 
 The professor robustness table does find pair/spread definitions where no-cost and 0.25-spread results are strongly positive, while 0.50-spread taker costs often erase the edge. That is the main empirical evidence that execution quality is now the central research question.
@@ -215,5 +219,14 @@ diagnostics make the regime flip explicit: short-only earns `+195.74` bps in
 Jan-Feb but loses `-956.95` bps in Mar-Apr, while long-only is positive in
 Mar-Apr but negative in train.  The correct policy is still no-trade until a
 regime classifier survives a later holdout.
+
+The supervised regime classifier replaces fixed gates with three states:
+mean-reversion, trend-continuation, and no-trade.  It is trained on pre-holdout
+data and selected on February validation, with an extra requirement that it beat
+active always-long/always-short controls on validation.  The selected classifier
+is validation-positive, but it loses `-982.51` bps on the Mar-Apr holdout and
+gets worse under 2x costs and 1-minute latency.  This confirms that the regime
+problem is real, but a classifier trained on the current sample is not yet a
+tradable solution.
 
 Reference PDFs are intentionally kept local and are not pushed to GitHub.

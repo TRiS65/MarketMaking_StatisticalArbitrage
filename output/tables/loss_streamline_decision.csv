@@ -6,3 +6,4 @@ expanded_fixed_bps_xlk_only_timing,no_trade,train_or_validation_net<=0;test_net<
 timing_robustness_current_selection,no_trade,No XLK-only timing rule passed Jan-Feb train filters.,0.0,0.0,0.0
 named_timing_candidate_micro075_e60,no_trade,named candidate audited on current top-5 basket with Mar-Apr test,-142.15963336817242,-894.7909209969378,-894.7909209969378
 regime_gated_timing_repair,no_trade,Selected on Jan-Feb only; Mar-Apr is holdout audit. Script label: diagnostic_only.,373.6135052696478,-131.35771604813883,-131.35771604813883
+regime_classifier_timing,no_trade,selected on February validation only; Mar-Apr is holdout. Script label: diagnostic_only.,114.62798638059564,-982.5101353508546,-982.5101353508546

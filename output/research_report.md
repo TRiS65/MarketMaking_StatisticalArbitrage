@@ -292,6 +292,7 @@ The maker/taker execution backtest is intentionally treated as a candidate scree
 | timing_robustness_current_selection | no_trade                    | No XLK-only timing rule passed Jan-Feb train filters.                                                                                              |                         0     |         0      |                         0      |
 | named_timing_candidate_micro075_e60 | no_trade                    | named candidate audited on current top-5 basket with Mar-Apr test                                                                                  |                      -142.16  |      -894.791  |                      -894.791  |
 | regime_gated_timing_repair          | no_trade                    | Selected on Jan-Feb only; Mar-Apr is holdout audit. Script label: diagnostic_only.                                                                 |                       373.614 |      -131.358  |                      -131.358  |
+| regime_classifier_timing            | no_trade                    | selected on February validation only; Mar-Apr is holdout. Script label: diagnostic_only.                                                           |                       114.628 |      -982.51   |                      -982.51   |
 
 ## Fixed-BPS Timing Controls on Expanded Data
 
@@ -477,6 +478,36 @@ Monthly side anatomy:
 | flip_short_uptrend_multi_day_trend_premium_lb1950_thr100_flip | 2026-02 |    167.889  |   143.347  |    24.5423  |         -29.7541 |          197.643  |           3852 |            2861 |
 | flip_short_uptrend_multi_day_trend_premium_lb1950_thr100_flip | 2026-03 |    156.568  |   188.972  |   -32.4045  |         101.566  |           55.0019 |           4216 |            3046 |
 | flip_short_uptrend_multi_day_trend_premium_lb1950_thr100_flip | 2026-04 |    777.474  |   138.157  |   639.317   |         877.698  |         -100.225  |           6179 |            1251 |
+
+## Regime Classifier
+
+The classifier version replaces fixed gates with a three-state supervised model: mean-reversion, trend-continuation, or no-trade.  January trains the classifier, February selects model/confidence settings, and March-April is the holdout.  Selection also requires the classifier to beat active always-long/always-short controls on validation, preventing a disguised directional rule from passing as regime intelligence.
+
+Selection:
+
+| decision        | selected_strategy                 | train_scheme   | model_name   |   horizon_min |   label_edge_bps |   confidence |   validation_net_bps |   mar_net_bps |   apr_net_bps |   test_net_bps |   test_2x_cost_net_bps |   latency1_test_net_bps |
+|:----------------|:----------------------------------|:---------------|:-------------|--------------:|-----------------:|-------------:|---------------------:|--------------:|--------------:|---------------:|-----------------------:|------------------------:|
+| diagnostic_only | jan_only_rf_depth3_h30_edge5_p0.4 | jan_only       | rf_depth3    |            30 |                5 |          0.4 |              114.628 |      -829.836 |      -152.675 |        -982.51 |                -1790.1 |                 -855.03 |
+
+Controls:
+
+| control                        |   validation_net_bps |   test_net_bps |   test_trades |
+|:-------------------------------|---------------------:|---------------:|--------------:|
+| selected_classifier            |              114.628 |       -982.51  |           450 |
+| sign_flip                      |             -391.929 |       -632.622 |           450 |
+| classifier_active_always_long  |             -380.256 |       -461.445 |           450 |
+| classifier_active_always_short |              102.955 |      -1153.69  |           450 |
+
+Monthly anatomy:
+
+| strategy                          | month   |   gross_bps |   cost_bps |   net_bps |   long_gross_bps |   short_gross_bps |   long_minutes |   short_minutes |
+|:----------------------------------|:--------|------------:|-----------:|----------:|-----------------:|------------------:|---------------:|----------------:|
+| jan_only_rf_depth3_h30_edge5_p0.4 | 2025-11 |    217.515  |    303.806 |  -86.2909 |         -5.59378 |          223.109  |             28 |            1211 |
+| jan_only_rf_depth3_h30_edge5_p0.4 | 2025-12 |     26.1501 |    230.758 | -204.608  |         60.4366  |          -34.2865 |            842 |            1645 |
+| jan_only_rf_depth3_h30_edge5_p0.4 | 2026-01 |    627.605  |    166.669 |  460.936  |        207.22    |          420.385  |           1543 |            1639 |
+| jan_only_rf_depth3_h30_edge5_p0.4 | 2026-02 |    253.284  |    138.656 |  114.628  |          5.83382 |          247.45   |            335 |            1106 |
+| jan_only_rf_depth3_h30_edge5_p0.4 | 2026-03 |   -262.691  |    567.145 | -829.836  |       -157.191   |         -105.5    |            948 |            2350 |
+| jan_only_rf_depth3_h30_edge5_p0.4 | 2026-04 |     87.7222 |    240.397 | -152.675  |        242.797   |         -155.075  |           2664 |            1481 |
 
 ## Sparse Market-Neutral Basket
 

@@ -101,6 +101,9 @@ def markdown_report() -> Path:
     regime_pnl = read_optional("regime_target_rule_monthly_pnl.csv")
     regime_gate_selection = read_optional("regime_gate_selection.csv")
     regime_gate_monthly = read_optional("regime_gate_monthly.csv")
+    regime_classifier_selection = read_optional("regime_classifier_selection.csv")
+    regime_classifier_controls = read_optional("regime_classifier_controls.csv")
+    regime_classifier_monthly = read_optional("regime_classifier_monthly.csv")
 
     text = f"""# XLK Microstructure Statistical Arbitrage: New-Data Progress Report
 
@@ -264,6 +267,22 @@ Monthly side anatomy:
 
 {md_table(regime_gate_monthly, ['strategy', 'month', 'gross_bps', 'cost_bps', 'net_bps', 'long_gross_bps', 'short_gross_bps', 'long_minutes', 'short_minutes'], 30)}
 
+## Regime Classifier
+
+The classifier version replaces fixed gates with a three-state supervised model: mean-reversion, trend-continuation, or no-trade.  January trains the classifier, February selects model/confidence settings, and March-April is the holdout.  Selection also requires the classifier to beat active always-long/always-short controls on validation, preventing a disguised directional rule from passing as regime intelligence.
+
+Selection:
+
+{md_table(regime_classifier_selection, ['decision', 'selected_strategy', 'train_scheme', 'model_name', 'horizon_min', 'label_edge_bps', 'confidence', 'validation_net_bps', 'mar_net_bps', 'apr_net_bps', 'test_net_bps', 'test_2x_cost_net_bps', 'latency1_test_net_bps'], 5)}
+
+Controls:
+
+{md_table(regime_classifier_controls, ['control', 'validation_net_bps', 'test_net_bps', 'test_trades'], 10)}
+
+Monthly anatomy:
+
+{md_table(regime_classifier_monthly, ['strategy', 'month', 'gross_bps', 'cost_bps', 'net_bps', 'long_gross_bps', 'short_gross_bps', 'long_minutes', 'short_minutes'], 10)}
+
 ## Sparse Market-Neutral Basket
 
 {md_table(candidates, ['subset', 'k', 'betas', 'train_adf_p', 'train_half_life_minutes', 'train_avg_oneway_cost_bps', 'score'], 10)}
@@ -345,6 +364,7 @@ def pdf_report() -> Path:
     timing_robust_target = read_optional("timing_robustness_target_rule.csv")
     regime_summary = read_optional("regime_shift_summary.csv")
     regime_gate_selection = read_optional("regime_gate_selection.csv")
+    regime_classifier_selection = read_optional("regime_classifier_selection.csv")
 
     styles = getSampleStyleSheet()
     out = OUTPUT / "research_report.pdf"
@@ -374,9 +394,10 @@ def pdf_report() -> Path:
     table_story(story, "Named Timing Candidate Re-Audit", timing_robust_target, ["strategy", "basket_symbols", "train_net_bps", "mar_net_bps", "apr_net_bps", "test_net_bps"], styles, 2, 5)
     table_story(story, "Regime Shift Summary", regime_summary, ["metric", "train_avg", "test_avg", "test_minus_train"], styles, 2, 12)
     table_story(story, "Regime-Gate Repair Selection", regime_gate_selection, ["decision", "selected_strategy", "gate_mode", "state_kind", "train_net_bps", "test_net_bps", "test_2x_cost_net_bps"], styles, 2, 5)
+    table_story(story, "Regime Classifier Selection", regime_classifier_selection, ["decision", "selected_strategy", "train_scheme", "model_name", "validation_net_bps", "test_net_bps", "test_2x_cost_net_bps"], styles, 2, 5)
     table_story(story, "Robust Alpha Controls", robust_controls, ["control", "train_net_bps", "test_net_bps", "test_trades"], styles, 2, 8)
     table_story(story, "XLK-Only Timing", timing, ["period", "gross_bps", "cost_bps", "net_bps", "trades"], styles, 2, 8)
-    for fig_name in ["professor_cost_scenario_leaderboard.png", "top20_method_comparison.png", "top20_signal_bucket.png", "regime_shift_diagnostics.png", "regime_gate_comparison.png", "robust_alpha_selected_cumulative.png", "timing_extension_cumulative_net.png"]:
+    for fig_name in ["professor_cost_scenario_leaderboard.png", "top20_method_comparison.png", "top20_signal_bucket.png", "regime_shift_diagnostics.png", "regime_gate_comparison.png", "regime_classifier_comparison.png", "robust_alpha_selected_cumulative.png", "timing_extension_cumulative_net.png"]:
         fig = FIGURES / fig_name
         if fig.exists():
             story.append(Image(fig.as_posix(), width=6.8 * inch, height=3.8 * inch))

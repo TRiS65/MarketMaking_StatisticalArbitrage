@@ -11,6 +11,7 @@
 | timing_robustness_current_selection | no_trade                    | No XLK-only timing rule passed Jan-Feb train filters.                                                                                              |                          0    |           0    |                           0    |
 | named_timing_candidate_micro075_e60 | no_trade                    | named candidate audited on current top-5 basket with Mar-Apr test                                                                                  |                       -142.16 |        -894.79 |                        -894.79 |
 | regime_gated_timing_repair          | no_trade                    | Selected on Jan-Feb only; Mar-Apr is holdout audit. Script label: diagnostic_only.                                                                 |                        373.61 |        -131.36 |                        -131.36 |
+| regime_classifier_timing            | no_trade                    | selected on February validation only; Mar-Apr is holdout. Script label: diagnostic_only.                                                           |                        114.63 |        -982.51 |                        -982.51 |
 
 ## 1. Market-neutral / pair-trading PnL attribution
 
@@ -163,6 +164,25 @@ Monthly side anatomy for baseline, side-only diagnostics, and selected/best gate
 | flip_short_uptrend_multi_day_trend_premium_lb1950_thr100_flip | 2026-04 |      777.47 |     138.16 |    639.32 |           877.7  |           -100.22 |           6179 |            1251 |
 
 Interpretation: premium-persistence gates can reduce the April short-side blow-up, but the Jan-Feb-selected gate still does not produce positive Mar-Apr net after a 2x cost buffer. Side-only diagnostics show the regime flip directly: short-only works in Jan-Feb but fails badly in April, while long-only helps April but fails in train. This supports a no-trade policy until a regime classifier is validated on a later holdout.
+
+## 8. Supervised regime classifier
+
+Selection table:
+
+| decision        | selected_strategy                 | train_scheme   | model_name   |   horizon_min |   confidence |   validation_net_bps |   mar_net_bps |   apr_net_bps |   test_net_bps |   test_2x_cost_net_bps |   latency1_test_net_bps |
+|:----------------|:----------------------------------|:---------------|:-------------|--------------:|-------------:|---------------------:|--------------:|--------------:|---------------:|-----------------------:|------------------------:|
+| diagnostic_only | jan_only_rf_depth3_h30_edge5_p0.4 | jan_only       | rf_depth3    |            30 |          0.4 |               114.63 |       -829.84 |       -152.67 |        -982.51 |                -1790.1 |                 -855.03 |
+
+Controls:
+
+| control                        |   validation_net_bps |   test_net_bps |   test_trades |
+|:-------------------------------|---------------------:|---------------:|--------------:|
+| selected_classifier            |               114.63 |        -982.51 |           450 |
+| sign_flip                      |              -391.93 |        -632.62 |           450 |
+| classifier_active_always_long  |              -380.26 |        -461.45 |           450 |
+| classifier_active_always_short |               102.95 |       -1153.69 |           450 |
+
+Interpretation: the classifier is allowed to choose mean-reversion, trend-continuation, or no-trade, but it still fails the Mar-Apr holdout. The selected classifier is validation-positive, yet test net is negative and cost/latency stress is worse. Therefore the regime idea remains a research direction, not a tradable rule.
 
 ## Recommended next implementation
 

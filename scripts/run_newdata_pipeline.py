@@ -43,6 +43,7 @@ def main() -> None:
     run([py, "scripts/run_timing_robustness.py"])
     run([py, "scripts/run_regime_shift_diagnostics.py"])
     run([py, "scripts/run_regime_gate_experiments.py"])
+    run([py, "scripts/run_regime_classifier.py"])
     run([py, "scripts/run_microstructure_signal_refinement.py", "--root", "."])
     run([py, "scripts/run_timing_extension.py"])
     run([py, "scripts/run_timing_bidask_execution.py"])
