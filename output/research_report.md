@@ -291,6 +291,7 @@ The maker/taker execution backtest is intentionally treated as a candidate scree
 | expanded_fixed_bps_xlk_only_timing  | no_trade                    | train_or_validation_net<=0;test_net<=0;2x_cost_test<=0;latency1_test<=0;does_not_beat_directional_control;sign_flip_not_worse;circular_pvalue>0.10 |                     -2115.46  |      -977.239  |                      -977.239  |
 | timing_robustness_current_selection | no_trade                    | No XLK-only timing rule passed Jan-Feb train filters.                                                                                              |                         0     |         0      |                         0      |
 | named_timing_candidate_micro075_e60 | no_trade                    | named candidate audited on current top-5 basket with Mar-Apr test                                                                                  |                      -142.16  |      -894.791  |                      -894.791  |
+| regime_gated_timing_repair          | no_trade                    | Selected on Jan-Feb only; Mar-Apr is holdout audit. Script label: diagnostic_only.                                                                 |                       373.614 |      -131.358  |                      -131.358  |
 
 ## Fixed-BPS Timing Controls on Expanded Data
 
@@ -431,6 +432,51 @@ Named timing candidate monthly PnL anatomy:
 | 2026-02 |    167.889  |    143.347 |    24.5423 |       70 |         -29.7541 |          197.643  |           3852 |            2861 |
 | 2026-03 |    156.568  |    188.972 |   -32.4045 |       76 |         101.566  |           55.0019 |           4216 |            3046 |
 | 2026-04 |   -724.159  |    138.195 |  -862.355  |       75 |         126.882  |         -851.041  |           1010 |            6420 |
+
+## Regime-Gate Repair Experiments
+
+The April diagnosis suggests a specific repair: prevent the contrarian rule from shorting XLK when the premium is persistent and/or both XLK and the sparse basket are trending upward.  The gate experiment keeps the target signal fixed and only changes the trade/no-trade overlay.  Gate selection uses January-February only; March-April remains holdout.
+
+Selection:
+
+| decision        | selected_strategy                              | gate_mode   | state_kind          |   lookback_min |   trend_threshold_bps |   train_net_bps |   mar_net_bps |   apr_net_bps |   test_net_bps |   test_2x_cost_net_bps |
+|:----------------|:-----------------------------------------------|:------------|:--------------------|---------------:|----------------------:|----------------:|--------------:|--------------:|---------------:|-----------------------:|
+| diagnostic_only | two_sided_premium_persistence_lb780_thr75_flat | two_sided   | premium_persistence |            780 |                    75 |         373.614 |      -195.377 |       64.0195 |       -131.358 |               -210.735 |
+
+Monthly side anatomy:
+
+| strategy                                                      | month   |   gross_bps |   cost_bps |     net_bps |   long_gross_bps |   short_gross_bps |   long_minutes |   short_minutes |
+|:--------------------------------------------------------------|:--------|------------:|-----------:|------------:|-----------------:|------------------:|---------------:|----------------:|
+| baseline_no_gate                                              | 2025-11 |   -578.952  |   326.161  |  -905.113   |        -463.509  |         -115.444  |           4584 |            1342 |
+| baseline_no_gate                                              | 2025-12 |   -961.783  |   285.366  | -1247.15    |        -567.937  |         -393.845  |           4643 |            3426 |
+| baseline_no_gate                                              | 2026-01 |    -22.7232 |   144.013  |  -166.736   |        -171.264  |          148.54   |            627 |            4973 |
+| baseline_no_gate                                              | 2026-02 |    167.889  |   143.347  |    24.5423  |         -29.7541 |          197.643  |           3852 |            2861 |
+| baseline_no_gate                                              | 2026-03 |    156.568  |   188.972  |   -32.4045  |         101.566  |           55.0019 |           4216 |            3046 |
+| baseline_no_gate                                              | 2026-04 |   -724.159  |   138.195  |  -862.355   |         126.882  |         -851.041  |           1010 |            6420 |
+| long_only_diagnostic                                          | 2025-11 |   -463.509  |   202.699  |  -666.208   |        -463.509  |            0      |           4584 |               0 |
+| long_only_diagnostic                                          | 2025-12 |   -567.937  |   170.015  |  -737.952   |        -567.937  |            0      |           4643 |               0 |
+| long_only_diagnostic                                          | 2026-01 |   -171.264  |    30.3749 |  -201.638   |        -171.264  |            0      |            627 |               0 |
+| long_only_diagnostic                                          | 2026-02 |    -29.7541 |   106.543  |  -136.297   |         -29.7541 |            0      |           3852 |               0 |
+| long_only_diagnostic                                          | 2026-03 |    101.566  |   141.998  |   -40.4315  |         101.566  |            0      |           4216 |               0 |
+| long_only_diagnostic                                          | 2026-04 |    126.882  |    24.2637 |   102.618   |         126.882  |            0      |           1010 |               0 |
+| short_only_diagnostic                                         | 2025-11 |   -115.444  |   123.462  |  -238.906   |           0      |         -115.444  |              0 |            1342 |
+| short_only_diagnostic                                         | 2025-12 |   -393.845  |   115.351  |  -509.196   |           0      |         -393.845  |              0 |            3426 |
+| short_only_diagnostic                                         | 2026-01 |    148.54   |   113.638  |    34.9025  |           0      |          148.54   |              0 |            4973 |
+| short_only_diagnostic                                         | 2026-02 |    197.643  |    36.8037 |   160.839   |           0      |          197.643  |              0 |            2861 |
+| short_only_diagnostic                                         | 2026-03 |     55.0019 |    46.9749 |     8.02699 |           0      |           55.0019 |              0 |            3046 |
+| short_only_diagnostic                                         | 2026-04 |   -851.041  |   113.932  |  -964.973   |           0      |         -851.041  |              0 |            6420 |
+| two_sided_premium_persistence_lb780_thr75_flat                | 2025-11 |    162.081  |   186.567  |   -24.4863  |         273.508  |         -111.427  |           1081 |            1261 |
+| two_sided_premium_persistence_lb780_thr75_flat                | 2025-12 |   -195.482  |    73.814  |  -269.296   |        -164.026  |          -31.4561 |            802 |             476 |
+| two_sided_premium_persistence_lb780_thr75_flat                | 2026-01 |    171.838  |    78.4391 |    93.3988  |        -171.264  |          343.101  |            627 |            2186 |
+| two_sided_premium_persistence_lb780_thr75_flat                | 2026-02 |    362.733  |    82.5183 |   280.215   |         122.76   |          239.973  |           1040 |            1025 |
+| two_sided_premium_persistence_lb780_thr75_flat                | 2026-03 |   -142.559  |    52.8178 |  -195.377   |          26.8515 |         -169.411  |            575 |            1232 |
+| two_sided_premium_persistence_lb780_thr75_flat                | 2026-04 |     90.5791 |    26.5596 |    64.0195  |          87.5356 |            3.0435 |            539 |             439 |
+| flip_short_uptrend_multi_day_trend_premium_lb1950_thr100_flip | 2025-11 |   -578.952  |   326.161  |  -905.113   |        -463.509  |         -115.444  |           4584 |            1342 |
+| flip_short_uptrend_multi_day_trend_premium_lb1950_thr100_flip | 2025-12 |   -893.673  |   285.352  | -1179.03    |        -533.883  |         -359.791  |           5029 |            3040 |
+| flip_short_uptrend_multi_day_trend_premium_lb1950_thr100_flip | 2026-01 |   -234.698  |   144.021  |  -378.719   |        -277.251  |           42.5529 |            772 |            4828 |
+| flip_short_uptrend_multi_day_trend_premium_lb1950_thr100_flip | 2026-02 |    167.889  |   143.347  |    24.5423  |         -29.7541 |          197.643  |           3852 |            2861 |
+| flip_short_uptrend_multi_day_trend_premium_lb1950_thr100_flip | 2026-03 |    156.568  |   188.972  |   -32.4045  |         101.566  |           55.0019 |           4216 |            3046 |
+| flip_short_uptrend_multi_day_trend_premium_lb1950_thr100_flip | 2026-04 |    777.474  |   138.157  |   639.317   |         877.698  |         -100.225  |           6179 |            1251 |
 
 ## Sparse Market-Neutral Basket
 

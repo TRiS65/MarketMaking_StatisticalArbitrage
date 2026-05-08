@@ -10,6 +10,7 @@
 | expanded_fixed_bps_xlk_only_timing  | no_trade                    | train_or_validation_net<=0;test_net<=0;2x_cost_test<=0;latency1_test<=0;does_not_beat_directional_control;sign_flip_not_worse;circular_pvalue>0.10 |                      -2115.46 |        -977.24 |                        -977.24 |
 | timing_robustness_current_selection | no_trade                    | No XLK-only timing rule passed Jan-Feb train filters.                                                                                              |                          0    |           0    |                           0    |
 | named_timing_candidate_micro075_e60 | no_trade                    | named candidate audited on current top-5 basket with Mar-Apr test                                                                                  |                       -142.16 |        -894.79 |                        -894.79 |
+| regime_gated_timing_repair          | no_trade                    | Selected on Jan-Feb only; Mar-Apr is holdout audit. Script label: diagnostic_only.                                                                 |                        373.61 |        -131.36 |                        -131.36 |
 
 ## 1. Market-neutral / pair-trading PnL attribution
 
@@ -117,6 +118,51 @@ Named candidate execution audit:
 | exact_bidask      |             5 |         -267.18 |        -20.35 |       -866.28 |        -886.63 |           152 |
 
 Interpretation: this resolves the earlier contradiction. The old March-only positive timing result does not survive regeneration on the current expanded top-5 basket plus Mar-Apr holdout.
+
+## 7. Regime-gate repair experiment
+
+Selection table:
+
+| decision        | selected_strategy                              | gate_mode   | state_kind          |   lookback_min |   trend_threshold_bps |   train_net_bps |   mar_net_bps |   apr_net_bps |   test_net_bps |   test_2x_cost_net_bps |
+|:----------------|:-----------------------------------------------|:------------|:--------------------|---------------:|----------------------:|----------------:|--------------:|--------------:|---------------:|-----------------------:|
+| diagnostic_only | two_sided_premium_persistence_lb780_thr75_flat | two_sided   | premium_persistence |            780 |                    75 |          373.61 |       -195.38 |         64.02 |        -131.36 |                -210.74 |
+
+Monthly side anatomy for baseline, side-only diagnostics, and selected/best gates:
+
+| strategy                                                      | month   |   gross_bps |   cost_bps |   net_bps |   long_gross_bps |   short_gross_bps |   long_minutes |   short_minutes |
+|:--------------------------------------------------------------|:--------|------------:|-----------:|----------:|-----------------:|------------------:|---------------:|----------------:|
+| baseline_no_gate                                              | 2025-11 |     -578.95 |     326.16 |   -905.11 |          -463.51 |           -115.44 |           4584 |            1342 |
+| baseline_no_gate                                              | 2025-12 |     -961.78 |     285.37 |  -1247.15 |          -567.94 |           -393.85 |           4643 |            3426 |
+| baseline_no_gate                                              | 2026-01 |      -22.72 |     144.01 |   -166.74 |          -171.26 |            148.54 |            627 |            4973 |
+| baseline_no_gate                                              | 2026-02 |      167.89 |     143.35 |     24.54 |           -29.75 |            197.64 |           3852 |            2861 |
+| baseline_no_gate                                              | 2026-03 |      156.57 |     188.97 |    -32.4  |           101.57 |             55    |           4216 |            3046 |
+| baseline_no_gate                                              | 2026-04 |     -724.16 |     138.2  |   -862.35 |           126.88 |           -851.04 |           1010 |            6420 |
+| long_only_diagnostic                                          | 2025-11 |     -463.51 |     202.7  |   -666.21 |          -463.51 |              0    |           4584 |               0 |
+| long_only_diagnostic                                          | 2025-12 |     -567.94 |     170.01 |   -737.95 |          -567.94 |              0    |           4643 |               0 |
+| long_only_diagnostic                                          | 2026-01 |     -171.26 |      30.37 |   -201.64 |          -171.26 |              0    |            627 |               0 |
+| long_only_diagnostic                                          | 2026-02 |      -29.75 |     106.54 |   -136.3  |           -29.75 |              0    |           3852 |               0 |
+| long_only_diagnostic                                          | 2026-03 |      101.57 |     142    |    -40.43 |           101.57 |              0    |           4216 |               0 |
+| long_only_diagnostic                                          | 2026-04 |      126.88 |      24.26 |    102.62 |           126.88 |              0    |           1010 |               0 |
+| short_only_diagnostic                                         | 2025-11 |     -115.44 |     123.46 |   -238.91 |             0    |           -115.44 |              0 |            1342 |
+| short_only_diagnostic                                         | 2025-12 |     -393.85 |     115.35 |   -509.2  |             0    |           -393.85 |              0 |            3426 |
+| short_only_diagnostic                                         | 2026-01 |      148.54 |     113.64 |     34.9  |             0    |            148.54 |              0 |            4973 |
+| short_only_diagnostic                                         | 2026-02 |      197.64 |      36.8  |    160.84 |             0    |            197.64 |              0 |            2861 |
+| short_only_diagnostic                                         | 2026-03 |       55    |      46.97 |      8.03 |             0    |             55    |              0 |            3046 |
+| short_only_diagnostic                                         | 2026-04 |     -851.04 |     113.93 |   -964.97 |             0    |           -851.04 |              0 |            6420 |
+| two_sided_premium_persistence_lb780_thr75_flat                | 2025-11 |      162.08 |     186.57 |    -24.49 |           273.51 |           -111.43 |           1081 |            1261 |
+| two_sided_premium_persistence_lb780_thr75_flat                | 2025-12 |     -195.48 |      73.81 |   -269.3  |          -164.03 |            -31.46 |            802 |             476 |
+| two_sided_premium_persistence_lb780_thr75_flat                | 2026-01 |      171.84 |      78.44 |     93.4  |          -171.26 |            343.1  |            627 |            2186 |
+| two_sided_premium_persistence_lb780_thr75_flat                | 2026-02 |      362.73 |      82.52 |    280.21 |           122.76 |            239.97 |           1040 |            1025 |
+| two_sided_premium_persistence_lb780_thr75_flat                | 2026-03 |     -142.56 |      52.82 |   -195.38 |            26.85 |           -169.41 |            575 |            1232 |
+| two_sided_premium_persistence_lb780_thr75_flat                | 2026-04 |       90.58 |      26.56 |     64.02 |            87.54 |              3.04 |            539 |             439 |
+| flip_short_uptrend_multi_day_trend_premium_lb1950_thr100_flip | 2025-11 |     -578.95 |     326.16 |   -905.11 |          -463.51 |           -115.44 |           4584 |            1342 |
+| flip_short_uptrend_multi_day_trend_premium_lb1950_thr100_flip | 2025-12 |     -893.67 |     285.35 |  -1179.03 |          -533.88 |           -359.79 |           5029 |            3040 |
+| flip_short_uptrend_multi_day_trend_premium_lb1950_thr100_flip | 2026-01 |     -234.7  |     144.02 |   -378.72 |          -277.25 |             42.55 |            772 |            4828 |
+| flip_short_uptrend_multi_day_trend_premium_lb1950_thr100_flip | 2026-02 |      167.89 |     143.35 |     24.54 |           -29.75 |            197.64 |           3852 |            2861 |
+| flip_short_uptrend_multi_day_trend_premium_lb1950_thr100_flip | 2026-03 |      156.57 |     188.97 |    -32.4  |           101.57 |             55    |           4216 |            3046 |
+| flip_short_uptrend_multi_day_trend_premium_lb1950_thr100_flip | 2026-04 |      777.47 |     138.16 |    639.32 |           877.7  |           -100.22 |           6179 |            1251 |
+
+Interpretation: premium-persistence gates can reduce the April short-side blow-up, but the Jan-Feb-selected gate still does not produce positive Mar-Apr net after a 2x cost buffer. Side-only diagnostics show the regime flip directly: short-only works in Jan-Feb but fails badly in April, while long-only helps April but fails in train. This supports a no-trade policy until a regime classifier is validated on a later holdout.
 
 ## Recommended next implementation
 

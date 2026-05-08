@@ -226,6 +226,8 @@ def main() -> None:
     timing_robust = safe_read(tables / "timing_robustness_decision.csv")
     timing_target = safe_read(tables / "timing_robustness_target_rule.csv")
     timing_target_exec = safe_read(tables / "timing_robustness_target_execution_audit.csv")
+    regime_gate = safe_read(tables / "regime_gate_selection.csv")
+    regime_gate_monthly = safe_read(tables / "regime_gate_monthly.csv")
 
     decisions = []
     # 1) Strict market-neutral / pair trading decision
@@ -311,6 +313,18 @@ def main() -> None:
             "raw_test_net_bps_before_gate": r.get("test_net_bps", np.nan),
         })
 
+    if not regime_gate.empty:
+        r = regime_gate.iloc[0]
+        decision = str(r.get("decision", "no_trade"))
+        decisions.append({
+            "research_path": "regime_gated_timing_repair",
+            "decision": "no_trade" if decision != "active_candidate" else "candidate_active",
+            "reason": str(r.get("reason", "regime-gate repair experiment")) + f" Script label: {decision}.",
+            "train_or_validation_net_bps": r.get("train_net_bps", np.nan),
+            "test_net_bps": r.get("test_net_bps", np.nan),
+            "raw_test_net_bps_before_gate": r.get("test_net_bps", np.nan),
+        })
+
     decision_df = pd.DataFrame(decisions)
     decision_df.to_csv(tables / "loss_streamline_decision.csv", index=False)
 
@@ -365,6 +379,13 @@ def main() -> None:
     lines.append("\nNamed candidate execution audit:\n")
     lines.append(table_md(timing_target_exec, ["execution_model", "latency_min", "train_net_bps", "mar_net_bps", "apr_net_bps", "test_net_bps", "test_trades"], n=10, digits=2))
     lines.append("\nInterpretation: this resolves the earlier contradiction. The old March-only positive timing result does not survive regeneration on the current expanded top-5 basket plus Mar-Apr holdout.\n")
+
+    lines.append("## 7. Regime-gate repair experiment\n")
+    lines.append("Selection table:\n")
+    lines.append(table_md(regime_gate, ["decision", "selected_strategy", "gate_mode", "state_kind", "lookback_min", "trend_threshold_bps", "train_net_bps", "mar_net_bps", "apr_net_bps", "test_net_bps", "test_2x_cost_net_bps"], n=5, digits=2))
+    lines.append("\nMonthly side anatomy for baseline, side-only diagnostics, and selected/best gates:\n")
+    lines.append(table_md(regime_gate_monthly, ["strategy", "month", "gross_bps", "cost_bps", "net_bps", "long_gross_bps", "short_gross_bps", "long_minutes", "short_minutes"], n=30, digits=2))
+    lines.append("\nInterpretation: premium-persistence gates can reduce the April short-side blow-up, but the Jan-Feb-selected gate still does not produce positive Mar-Apr net after a 2x cost buffer. Side-only diagnostics show the regime flip directly: short-only works in Jan-Feb but fails badly in April, while long-only helps April but fails in train. This supports a no-trade policy until a regime classifier is validated on a later holdout.\n")
 
     lines.append("## Recommended next implementation\n")
     lines.append("1. Keep market-neutral pair/basket trading behind a hard no-trade gate. Do not report it as profitable unless gate_pass_pairs > 0 and the gated test result is positive.\n")

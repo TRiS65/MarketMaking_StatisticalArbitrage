@@ -1,0 +1,2 @@
+decision,reason,selected_strategy,gate_mode,state_kind,lookback_min,trend_threshold_bps,gate_action,train_net_bps,jan_net_bps,feb_net_bps,mar_net_bps,apr_net_bps,test_net_bps,test_2x_cost_net_bps,test_trades,short_gross_bps,short_minutes
+diagnostic_only,Selected on Jan-Feb only; Mar-Apr is holdout audit.,two_sided_premium_persistence_lb780_thr75_flat,two_sided,premium_persistence,780,75.0,flat,373.6135052696478,93.39876421797206,280.2147410516758,-195.3772332984403,64.01951725030145,-131.35771604813885,-210.73507588759705,31,-166.36750913358256,1671

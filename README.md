@@ -44,6 +44,7 @@ The raw build scans more than 90GB of gzipped TAQ data, so it is intentionally s
 | `scripts/run_fixed_bps_timing_controls.py` | Expanded-sample controls for the fixed-bps XLK-only timing candidate shape |
 | `scripts/run_timing_robustness.py` | Current top-5 XLK-only timing robustness with Mar-Apr holdout and exact bid/ask latency audit |
 | `scripts/run_regime_shift_diagnostics.py` | Regime-shift audit explaining whether poor timing comes from linkage, costs, or signal direction |
+| `scripts/run_regime_gate_experiments.py` | Trend/premium-persistence no-trade gates for the April timing failure |
 | `scripts/run_microstructure_signal_refinement.py` | Lecture-driven order-flow/spread/volatility/impact feature timing screen |
 | `scripts/run_loss_streamline.py` | Table-driven loss attribution and active/no-trade policy summary |
 | `scripts/run_robust_alpha_suite.py` | Joint optimizer for XLK-only timing and partial/full hedge variants |
@@ -124,6 +125,8 @@ The new diagnostics include OU/Avellaneda-Lee style mean-reversion scores. The n
 | `output/tables/timing_robustness_target_rule.csv` | Re-audit of `micro_shrink_0.75_cw10d_e60_x0_mh240` on the current top-5 basket |
 | `output/tables/regime_shift_summary.csv` | Train/test regime diagnostics for XLK/basket linkage, spread, signal scale, and signal IC |
 | `output/tables/regime_target_rule_monthly_pnl.csv` | Monthly gross/cost/net attribution for the named timing candidate |
+| `output/tables/regime_gate_selection.csv` | Jan-Feb-selected regime gate and Mar-Apr holdout audit |
+| `output/tables/regime_gate_monthly.csv` | Monthly side anatomy for baseline, side-only diagnostics, and selected/best gates |
 | `output/tables/microstructure_refinement_horizon_summary.csv` | Order-flow/spread/volatility/impact timing horizon sweep |
 | `output/tables/loss_streamline_decision.csv` | Final active/no-trade policy summary by research path |
 | `output/tables/robust_alpha_selection.csv` | Train-only robust alpha selection decision |
@@ -154,6 +157,7 @@ The first new-data quick run gives a more conservative conclusion than the old J
 | Current top-5 timing robustness re-audit | no Jan-Feb stability rule passes | `0.00` bps selected policy | No active timing rule selected |
 | Named timing candidate `micro_shrink_0.75_cw10d_e60_x0_mh240` | train `-142.16` bps | Mar-Apr `-894.79` bps | March-only positive result does not survive April/current basket |
 | Regime-shift audit | corr `0.655` train vs `0.634` test; beta `0.614` vs `0.617` | April short gross `-851` bps before costs | Linkage does not collapse; April is a directional/signal-regime failure |
+| Regime-gate repair | selected Jan-Feb gate train `+373.61` bps | Mar-Apr `-131.36` bps, 2x cost `-210.74` bps | Premium-persistence gates reduce April damage but do not pass final active gate |
 | Microstructure feature timing refinement | no horizon passes validation gate | best reported test `+0.39` bps with validation `-40.85` bps | Order-flow/spread/volatility features do not rescue timing as a linear rule |
 
 The professor robustness table does find pair/spread definitions where no-cost and 0.25-spread results are strongly positive, while 0.50-spread taker costs often erase the edge. That is the main empirical evidence that execution quality is now the central research question.
@@ -202,5 +206,14 @@ persistently positive, and the contrarian timing rule is short XLK for most of
 the month.  The April short-side gross loss is about `-851` bps before costs,
 so the next refinement should be a regime/trend gate rather than another
 symmetric z-score tweak.
+
+The regime-gate repair experiment confirms the diagnosis but does not yet create
+an honest active strategy.  A premium-persistence gate selected on Jan-Feb earns
+`+373.61` bps in train and turns April positive at `+64.02` bps, but March loses
+`-195.38` bps and the full Mar-Apr holdout remains `-131.36` bps.  Side-only
+diagnostics make the regime flip explicit: short-only earns `+195.74` bps in
+Jan-Feb but loses `-956.95` bps in Mar-Apr, while long-only is positive in
+Mar-Apr but negative in train.  The correct policy is still no-trade until a
+regime classifier survives a later holdout.
 
 Reference PDFs are intentionally kept local and are not pushed to GitHub.

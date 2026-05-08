@@ -99,6 +99,8 @@ def markdown_report() -> Path:
     regime_summary = read_optional("regime_shift_summary.csv")
     regime_market = read_optional("regime_monthly_market_state.csv")
     regime_pnl = read_optional("regime_target_rule_monthly_pnl.csv")
+    regime_gate_selection = read_optional("regime_gate_selection.csv")
+    regime_gate_monthly = read_optional("regime_gate_monthly.csv")
 
     text = f"""# XLK Microstructure Statistical Arbitrage: New-Data Progress Report
 
@@ -250,6 +252,18 @@ Named timing candidate monthly PnL anatomy:
 
 {md_table(regime_pnl, ['month', 'gross_bps', 'cost_bps', 'net_bps', 'trades', 'long_gross_bps', 'short_gross_bps', 'long_minutes', 'short_minutes'], 10)}
 
+## Regime-Gate Repair Experiments
+
+The April diagnosis suggests a specific repair: prevent the contrarian rule from shorting XLK when the premium is persistent and/or both XLK and the sparse basket are trending upward.  The gate experiment keeps the target signal fixed and only changes the trade/no-trade overlay.  Gate selection uses January-February only; March-April remains holdout.
+
+Selection:
+
+{md_table(regime_gate_selection, ['decision', 'selected_strategy', 'gate_mode', 'state_kind', 'lookback_min', 'trend_threshold_bps', 'train_net_bps', 'mar_net_bps', 'apr_net_bps', 'test_net_bps', 'test_2x_cost_net_bps'], 5)}
+
+Monthly side anatomy:
+
+{md_table(regime_gate_monthly, ['strategy', 'month', 'gross_bps', 'cost_bps', 'net_bps', 'long_gross_bps', 'short_gross_bps', 'long_minutes', 'short_minutes'], 30)}
+
 ## Sparse Market-Neutral Basket
 
 {md_table(candidates, ['subset', 'k', 'betas', 'train_adf_p', 'train_half_life_minutes', 'train_avg_oneway_cost_bps', 'score'], 10)}
@@ -330,6 +344,7 @@ def pdf_report() -> Path:
     timing_robust_decision = read_optional("timing_robustness_decision.csv")
     timing_robust_target = read_optional("timing_robustness_target_rule.csv")
     regime_summary = read_optional("regime_shift_summary.csv")
+    regime_gate_selection = read_optional("regime_gate_selection.csv")
 
     styles = getSampleStyleSheet()
     out = OUTPUT / "research_report.pdf"
@@ -358,9 +373,10 @@ def pdf_report() -> Path:
     table_story(story, "Current Timing Robustness Re-Audit", timing_robust_decision, ["decision", "reason", "train_net_bps", "test_net_bps"], styles, 2, 5)
     table_story(story, "Named Timing Candidate Re-Audit", timing_robust_target, ["strategy", "basket_symbols", "train_net_bps", "mar_net_bps", "apr_net_bps", "test_net_bps"], styles, 2, 5)
     table_story(story, "Regime Shift Summary", regime_summary, ["metric", "train_avg", "test_avg", "test_minus_train"], styles, 2, 12)
+    table_story(story, "Regime-Gate Repair Selection", regime_gate_selection, ["decision", "selected_strategy", "gate_mode", "state_kind", "train_net_bps", "test_net_bps", "test_2x_cost_net_bps"], styles, 2, 5)
     table_story(story, "Robust Alpha Controls", robust_controls, ["control", "train_net_bps", "test_net_bps", "test_trades"], styles, 2, 8)
     table_story(story, "XLK-Only Timing", timing, ["period", "gross_bps", "cost_bps", "net_bps", "trades"], styles, 2, 8)
-    for fig_name in ["professor_cost_scenario_leaderboard.png", "top20_method_comparison.png", "top20_signal_bucket.png", "regime_shift_diagnostics.png", "robust_alpha_selected_cumulative.png", "timing_extension_cumulative_net.png"]:
+    for fig_name in ["professor_cost_scenario_leaderboard.png", "top20_method_comparison.png", "top20_signal_bucket.png", "regime_shift_diagnostics.png", "regime_gate_comparison.png", "robust_alpha_selected_cumulative.png", "timing_extension_cumulative_net.png"]:
         fig = FIGURES / fig_name
         if fig.exists():
             story.append(Image(fig.as_posix(), width=6.8 * inch, height=3.8 * inch))

@@ -5,3 +5,4 @@ fixed_bps_xlk_only_timing_candidate,legacy_candidate_shape_only,"legacy profit-s
 expanded_fixed_bps_xlk_only_timing,no_trade,train_or_validation_net<=0;test_net<=0;2x_cost_test<=0;latency1_test<=0;does_not_beat_directional_control;sign_flip_not_worse;circular_pvalue>0.10,-2115.4579442410177,-977.2390831260766,-977.2390831260766
 timing_robustness_current_selection,no_trade,No XLK-only timing rule passed Jan-Feb train filters.,0.0,0.0,0.0
 named_timing_candidate_micro075_e60,no_trade,named candidate audited on current top-5 basket with Mar-Apr test,-142.15963336817242,-894.7909209969378,-894.7909209969378
+regime_gated_timing_repair,no_trade,Selected on Jan-Feb only; Mar-Apr is holdout audit. Script label: diagnostic_only.,373.6135052696478,-131.35771604813883,-131.35771604813883
