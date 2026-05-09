@@ -9,9 +9,9 @@ three-state classifier from pre-holdout data:
     trend_continuation  -> trade the sparse-premium signal in the same direction
     no_trade            -> stay flat
 
-The model is intentionally small and auditable.  January trains the classifier,
-February selects the model/confidence threshold, and March-April is reported as
-the untouched holdout.
+The model is intentionally small and auditable.  Metadata train dates fit the
+classifier, the validation split selects model/confidence threshold, and the
+test split is reported as the untouched holdout.
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import balanced_accuracy_score, confusion_matrix
 
-from project_config import ETF, FIGURES, MINUTES_PER_DAY, OUTPUT, TABLES
+from project_config import ETF, FIGURES, MINUTES_PER_DAY, OUTPUT, TABLES, metadata
 from run_timing_robustness import (
     TimingRule,
     align_panel,
@@ -199,14 +199,19 @@ def period_stats(frame: pd.DataFrame, start: str, end: str, prefix: str) -> dict
 
 
 def full_stats(frame: pd.DataFrame) -> dict:
+    meta = metadata()
+    sample_start = pd.Timestamp(meta.get("start", "2025-05-01"))
+    train_end = pd.Timestamp(meta.get("train_end", "2026-02-01"))
+    validation_end = pd.Timestamp(meta.get("validation_end", "2026-03-01"))
+    test_end = pd.Timestamp(meta.get("test_end", meta.get("end", "2026-05-01")))
     out = {}
-    for month in ["2026-01", "2026-02", "2026-03", "2026-04"]:
-        start = month + "-01"
-        end = (pd.Timestamp(start) + pd.offsets.MonthBegin(1)).strftime("%Y-%m-%d")
-        out.update(period_stats(frame, start, end, month.replace("-", "_")))
-    out.update(period_stats(frame, "2026-01-01", "2026-02-01", "train"))
-    out.update(period_stats(frame, "2026-02-01", "2026-03-01", "validation"))
-    out.update(period_stats(frame, "2026-03-01", "2026-05-01", "test"))
+    for month_start in pd.date_range(sample_start.normalize().replace(day=1), test_end, freq="MS"):
+        month = month_start.strftime("%Y-%m")
+        month_end = month_start + pd.offsets.MonthBegin(1)
+        out.update(period_stats(frame, month_start, month_end, month.replace("-", "_")))
+    out.update(period_stats(frame, sample_start, train_end, "train"))
+    out.update(period_stats(frame, train_end, validation_end, "validation"))
+    out.update(period_stats(frame, validation_end, test_end, "test"))
     return out
 
 
@@ -270,13 +275,22 @@ def main() -> None:
     features = build_features(mid, micro, spread_bps, signal, weights)
 
     feature_cols = [c for c in features.columns if c not in {"label", "future_ret_bps"}]
+    meta = metadata()
+    sample_start = pd.Timestamp(meta.get("start", "2025-05-01"))
+    train_end = pd.Timestamp(meta.get("train_end", "2026-02-01"))
+    validation_end = pd.Timestamp(meta.get("validation_end", "2026-03-01"))
+    test_end = pd.Timestamp(meta.get("test_end", meta.get("end", "2026-05-01")))
+    recent_1m_start = max(sample_start, train_end - pd.DateOffset(months=1))
+    recent_3m_start = max(sample_start, train_end - pd.DateOffset(months=3))
+    recent_6m_start = max(sample_start, train_end - pd.DateOffset(months=6))
     train_schemes = {
-        "jan_only": (features.index >= "2026-01-01") & (features.index < "2026-02-01"),
-        "dec_jan": (features.index >= "2025-12-01") & (features.index < "2026-02-01"),
-        "nov_jan": (features.index >= "2025-11-01") & (features.index < "2026-02-01"),
+        "train_all": (features.index >= sample_start) & (features.index < train_end),
+        "recent_6m": (features.index >= recent_6m_start) & (features.index < train_end),
+        "recent_3m": (features.index >= recent_3m_start) & (features.index < train_end),
+        "recent_1m": (features.index >= recent_1m_start) & (features.index < train_end),
     }
-    validation = (features.index >= "2026-02-01") & (features.index < "2026-03-01")
-    test = (features.index >= "2026-03-01") & (features.index < "2026-05-01")
+    validation = (features.index >= train_end) & (features.index < validation_end)
+    test = (features.index >= validation_end) & (features.index < test_end)
 
     rows = []
     artifacts = {}
@@ -355,7 +369,7 @@ def main() -> None:
     else:
         selected = eligible.sort_values("validation_score", ascending=False).iloc[0]
         decision_label = "active_candidate" if selected["test_net_bps"] > 0 else "diagnostic_only"
-        reason = "selected on February validation only; Mar-Apr is holdout"
+        reason = "selected on metadata validation only; test is holdout"
 
     selected_name = str(selected["strategy"])
     selected_art = artifacts[selected_name]
@@ -385,7 +399,7 @@ def main() -> None:
     monthly.to_csv(TABLES / "regime_classifier_monthly.csv", index=False)
 
     cm_rows = []
-    for sample, mask in [("selected_train", selected_train_mask), ("validation_feb", validation), ("test_mar_apr", test)]:
+    for sample, mask in [("selected_train", selected_train_mask), ("validation", validation), ("test", test)]:
         ok = mask & usable
         labels = sorted(set(selected_label.loc[ok].astype(int).unique()).union(set(selected_pred.loc[ok].astype(int).unique())))
         cm = confusion_matrix(selected_label.loc[ok], selected_pred.loc[ok], labels=labels)
@@ -407,8 +421,8 @@ def main() -> None:
                 "confidence": selected["confidence"],
                 "train_net_bps": selected["train_net_bps"],
                 "validation_net_bps": selected["validation_net_bps"],
-                "mar_net_bps": selected["2026_03_net_bps"],
-                "apr_net_bps": selected["2026_04_net_bps"],
+                "mar_net_bps": selected.get("2026_03_net_bps", np.nan),
+                "apr_net_bps": selected.get("2026_04_net_bps", np.nan),
                 "test_net_bps": selected["test_net_bps"],
                 "test_trades": selected["test_trades"],
                 "test_2x_cost_net_bps": float(cost_latency[(cost_latency["cost_multiplier"] == 2.0) & (cost_latency["latency_min"] == 0)]["test_net_bps"].iloc[0]),
@@ -442,7 +456,7 @@ def main() -> None:
     plot = grid.head(12).set_index("strategy")[["validation_net_bps", "test_net_bps"]]
     plot.plot(kind="barh", ax=ax)
     ax.axvline(0, color="black", linewidth=0.8)
-    ax.set_title("Regime classifier candidates ranked on February validation")
+    ax.set_title("Regime classifier candidates ranked on validation")
     ax.set_xlabel("net bps")
     fig.tight_layout()
     fig.savefig(FIGURES / "regime_classifier_comparison.png", dpi=180)
@@ -451,7 +465,7 @@ def main() -> None:
     report = (
         "# Regime Classifier Experiment\n\n"
         "The classifier predicts three states: no-trade, mean-reversion, or trend-continuation. "
-        "January trains, February selects, and March-April is the final holdout.\n\n"
+        "The metadata train split fits the model, validation selects it, and test is the final holdout.\n\n"
         "## Selection\n\n"
         + decision.to_markdown(index=False)
         + "\n\n## Controls\n\n"
@@ -461,8 +475,8 @@ def main() -> None:
         + "\n\n## Monthly Anatomy\n\n"
         + monthly.to_markdown(index=False)
         + "\n\n## Interpretation\n\n"
-        "If the selected classifier is positive in validation but negative in Mar-Apr, the regime idea is diagnostically useful but not yet a tradable active rule. "
-        "If it is positive in Mar-Apr but fails controls or 2x cost/latency, it should remain a candidate rather than a final alpha claim.\n"
+        "If the selected classifier is positive in validation but negative in test, the regime idea is diagnostically useful but not yet a tradable active rule. "
+        "If it is positive in test but fails controls or 2x cost/latency, it should remain a candidate rather than a final alpha claim.\n"
     )
     (OUTPUT / "regime_classifier_report.md").write_text(report)
     print(f"[ok] wrote {TABLES / 'regime_classifier_selection.csv'}")

@@ -4,25 +4,25 @@ Test start: `2026-03-01`.
 
 ## Selected decision
 
-   decision                                                                  selected_strategy                               reason  train_net_bps  test_net_bps  benchmark_no_trade_train_bps  benchmark_no_trade_test_bps  economic_label
-active_rule xlk_only_timing_mid_ridge_pos_k3_zscore_mean_e3_x0.5_h0_contra_nogate_cw1950_mh180 passed train-only robustness filters     472.545957    -17.725389                           0.0                          0.0 XLK-only timing
+   decision                                                                             selected_strategy                               reason  train_net_bps  test_net_bps  benchmark_no_trade_train_bps  benchmark_no_trade_test_bps  economic_label
+active_rule xlk_only_timing_micro_conf_0.5_ridge_pos_k3_zscore_mean_e3_x0.5_h0_contra_nogate_cw1950_mh180 passed train-only robustness filters     335.687696    -202.21372                           0.0                          0.0 XLK-only timing
 
 ## Top train-selected rules
 
 ```
-                                                                                             strategy                family      signal_view                  subset threshold_mode center_mode  entry  exit_band  hedge_fraction  orientation  train_trades  train_net_bps  train_month_positive_rate  fold_positive_rate  test_trades  test_net_bps  final_train_selection_score
-                   xlk_only_timing_mid_ridge_pos_k3_zscore_mean_e3_x0.5_h0_contra_nogate_cw1950_mh180       xlk_only_timing              mid           NVDA AMD PLTR         zscore        mean    3.0        0.5             0.0            1          14.0     472.545957                       0.50                0.50         10.0    -17.725389                   545.097509
-        xlk_only_timing_micro_conf_0.5_ridge_pos_k3_zscore_mean_e3_x0.5_h0_contra_nogate_cw1950_mh180       xlk_only_timing   micro_conf_0.5           NVDA AMD PLTR         zscore        mean    3.0        0.5             0.0            1          14.0     457.584644                       0.50                0.50         10.0    -21.624286                   518.711673
-      xlk_only_timing_micro_shrink_0.5_ridge_pos_k5_zscore_mean_e3_x0.5_h0_contra_nogate_cw1950_mh180       xlk_only_timing micro_shrink_0.5 NVDA AMD PLTR LRCX AMAT         zscore        mean    3.0        0.5             0.0            1          10.0     330.031278                       0.50                0.50          0.0      0.000000                   424.696255
-        xlk_only_timing_micro_conf_0.5_ridge_pos_k5_zscore_mean_e3_x0.5_h0_contra_nogate_cw1950_mh180       xlk_only_timing   micro_conf_0.5 NVDA AMD PLTR LRCX AMAT         zscore        mean    3.0        0.5             0.0            1           8.0     327.637726                       0.50                0.50          0.0      0.000000                   421.825122
-                   xlk_only_timing_mid_ridge_pos_k5_zscore_mean_e3_x0.5_h0_contra_nogate_cw1950_mh180       xlk_only_timing              mid NVDA AMD PLTR LRCX AMAT         zscore        mean    3.0        0.5             0.0            1           8.0     327.637726                       0.50                0.50          0.0      0.000000                   421.825122
-partial_or_full_hedge_micro_shrink_0.5_ridge_pos_k5_zscore_mean_e3_x0.5_h1_contra_nogate_cw1950_mh180 partial_or_full_hedge micro_shrink_0.5 NVDA AMD PLTR LRCX AMAT         zscore        mean    3.0        0.5             1.0            1          10.0     115.634371                       0.50                0.50          0.0      0.000000                   168.962805
-             partial_or_full_hedge_mid_ridge_pos_k5_zscore_mean_e3_x0.5_h1_contra_nogate_cw1950_mh180 partial_or_full_hedge              mid NVDA AMD PLTR LRCX AMAT         zscore        mean    3.0        0.5             1.0            1           8.0     107.685408                       0.50                0.50          0.0      0.000000                   158.752285
-  partial_or_full_hedge_micro_conf_0.5_ridge_pos_k5_zscore_mean_e3_x0.5_h1_contra_nogate_cw1950_mh180 partial_or_full_hedge   micro_conf_0.5 NVDA AMD PLTR LRCX AMAT         zscore        mean    3.0        0.5             1.0            1           8.0     107.487008                       0.50                0.50          0.0      0.000000                   158.486538
-             partial_or_full_hedge_mid_ridge_pos_k3_zscore_mean_e3_x0.5_h1_contra_nogate_cw1950_mh180 partial_or_full_hedge              mid           NVDA AMD PLTR         zscore        mean    3.0        0.5             1.0            1          14.0      69.341980                       0.50                0.50         10.0    -44.079902                    99.972634
-  partial_or_full_hedge_micro_conf_0.5_ridge_pos_k3_zscore_mean_e3_x0.5_h1_contra_nogate_cw1950_mh180 partial_or_full_hedge   micro_conf_0.5           NVDA AMD PLTR         zscore        mean    3.0        0.5             1.0            1          14.0      41.857721                       0.25                0.25         10.0    -36.276111                    43.466930
-     xlk_only_timing_micro_conf_0.5_ridge_pos_k5_fixed_bps_mean_e50_x25_h0_contra_nogate_cw1950_mh180       xlk_only_timing   micro_conf_0.5 NVDA AMD PLTR LRCX AMAT      fixed_bps        mean   50.0       25.0             0.0            1         218.0     179.970474                       0.25                0.25        202.0  -1701.614100                  -406.000965
-                xlk_only_timing_mid_ridge_pos_k5_fixed_bps_mean_e50_x25_h0_contra_nogate_cw1950_mh180       xlk_only_timing              mid NVDA AMD PLTR LRCX AMAT      fixed_bps        mean   50.0       25.0             0.0            1         216.0     157.769956                       0.25                0.25        204.0  -1641.074611                  -436.249417
+                                                                                             strategy                family      signal_view              subset threshold_mode center_mode  entry  exit_band  hedge_fraction  orientation  train_trades  train_net_bps  train_month_positive_rate  fold_positive_rate  test_trades  test_net_bps  final_train_selection_score
+        xlk_only_timing_micro_conf_0.5_ridge_pos_k3_zscore_mean_e3_x0.5_h0_contra_nogate_cw1950_mh180       xlk_only_timing   micro_conf_0.5      NVDA AAPL MSFT         zscore        mean    3.0        0.5             0.0            1          54.0     335.687696                        0.5                0.75         16.0   -202.213720                   358.642331
+                   xlk_only_timing_mid_ridge_pos_k4_zscore_mean_e3_x0.5_h0_contra_nogate_cw1950_mh180       xlk_only_timing              mid NVDA AAPL MSFT AVGO         zscore        mean    3.0        0.5             0.0            1          48.0     290.225636                        0.5                0.75         10.0   -352.651210                   322.757072
+        xlk_only_timing_micro_conf_0.5_ridge_pos_k4_zscore_mean_e3_x0.5_h0_contra_nogate_cw1950_mh180       xlk_only_timing   micro_conf_0.5 NVDA AAPL MSFT AVGO         zscore        mean    3.0        0.5             0.0            1          48.0     292.008035                        0.5                0.75          8.0   -260.326394                   320.401320
+                   xlk_only_timing_mid_ridge_pos_k3_zscore_mean_e3_x0.5_h0_contra_nogate_cw1950_mh180       xlk_only_timing              mid      NVDA AAPL MSFT         zscore        mean    3.0        0.5             0.0            1          54.0     244.583109                        0.4                0.75         18.0   -224.160164                   237.055245
+  partial_or_full_hedge_micro_conf_0.5_ridge_pos_k3_zscore_mean_e3_x0.5_h1_contra_nogate_cw1950_mh180 partial_or_full_hedge   micro_conf_0.5      NVDA AAPL MSFT         zscore        mean    3.0        0.5             1.0            1          54.0     108.594090                        0.5                0.75         16.0   -173.446712                   142.958471
+      xlk_only_timing_micro_shrink_0.5_ridge_pos_k4_zscore_mean_e3_x0.5_h0_contra_nogate_cw1950_mh180       xlk_only_timing micro_shrink_0.5 NVDA AAPL MSFT AVGO         zscore        mean    3.0        0.5             0.0            1          40.0     143.405377                        0.4                0.50         14.0   -304.881635                    98.360608
+             partial_or_full_hedge_mid_ridge_pos_k3_zscore_mean_e3_x0.5_h1_contra_nogate_cw1950_mh180 partial_or_full_hedge              mid      NVDA AAPL MSFT         zscore        mean    3.0        0.5             1.0            1          54.0      61.066464                        0.3                0.75         18.0   -189.462372                    70.850160
+  partial_or_full_hedge_micro_conf_0.5_ridge_pos_k4_zscore_mean_e3_x0.5_h1_contra_nogate_cw1950_mh180 partial_or_full_hedge   micro_conf_0.5 NVDA AAPL MSFT AVGO         zscore        mean    3.0        0.5             1.0            1          48.0      39.360053                        0.4                0.75          8.0   -211.354584                    57.198896
+             partial_or_full_hedge_mid_ridge_pos_k4_zscore_mean_e3_x0.5_h1_contra_nogate_cw1950_mh180 partial_or_full_hedge              mid NVDA AAPL MSFT AVGO         zscore        mean    3.0        0.5             1.0            1          48.0      40.703710                        0.4                0.50         10.0   -246.835636                    48.237401
+partial_or_full_hedge_micro_shrink_0.5_ridge_pos_k4_zscore_mean_e3_x0.5_h1_contra_nogate_cw1950_mh180 partial_or_full_hedge micro_shrink_0.5 NVDA AAPL MSFT AVGO         zscore        mean    3.0        0.5             1.0            1          40.0      11.645760                        0.2                0.50         14.0   -202.087428                    10.568073
+      xlk_only_timing_micro_shrink_0.5_ridge_pos_k3_zscore_mean_e3_x0.5_h0_contra_nogate_cw1950_mh180       xlk_only_timing micro_shrink_0.5      NVDA AAPL MSFT         zscore        mean    3.0        0.5             0.0            1          58.0      28.845966                        0.4                0.50         16.0   -143.946193                   -47.346045
+partial_or_full_hedge_micro_shrink_0.5_ridge_pos_k3_zscore_mean_e3_x0.5_h1_contra_nogate_cw1950_mh180 partial_or_full_hedge micro_shrink_0.5      NVDA AAPL MSFT         zscore        mean    3.0        0.5             1.0            1          58.0     -35.429422                        0.4                0.75         16.0   -150.543658                   -85.757818
 ```
 
 ## How to read this
@@ -35,27 +35,27 @@ The optimizer selects only from train-period evidence.  March/test P&L is report
 
 ```
                     control  train_net_bps  test_net_bps  test_trades  test_avg_abs_position
-                   selected     472.545957    -17.725389         10.0               0.033672
-                  sign_flip    -484.458567    -23.471807         10.0               0.033672
-         active_always_long     312.151480    -11.460902         10.0               0.033672
-        active_always_short    -324.064091    -29.736293         10.0               0.033672
-        circular_shift_mean            NaN    -61.697920          NaN                    NaN
-         circular_shift_p95            NaN     42.759341          NaN                    NaN
-selected_vs_circular_pvalue            NaN      0.243902          NaN                    NaN
+                   selected     335.687696   -202.213720         16.0               0.072844
+                  sign_flip    -595.832732    170.693635         16.0               0.072844
+         active_always_long     160.076149     81.079679         16.0               0.072844
+        active_always_short    -420.221184   -112.599763         16.0               0.072844
+        circular_shift_mean            NaN   -251.459990          NaN                    NaN
+         circular_shift_p95            NaN   -125.148201          NaN                    NaN
+selected_vs_circular_pvalue            NaN      0.336634          NaN                    NaN
 ```
 
 ## Cost sensitivity
 
 ```
- cost_multiplier sample  gross_bps  cost_bps    net_bps
-             1.0  train 478.502262  5.956305 472.545957
-             1.0   test   2.873209 20.598598 -17.725389
-             1.5  train 478.502262  8.934458 469.567804
-             1.5   test   2.873209 30.897897 -28.024688
-             2.0  train 478.502262 11.912610 466.589652
-             2.0   test   2.873209 41.197195 -38.323986
-             3.0  train 478.502262 17.868916 460.633347
-             3.0   test   2.873209 61.795793 -58.922584
-             4.0  train 478.502262 23.825221 454.677041
-             4.0   test   2.873209 82.394391 -79.521182
+ cost_multiplier sample   gross_bps   cost_bps     net_bps
+             1.0  train  465.760214 130.072518  335.687696
+             1.0   test -186.453678  15.760042 -202.213720
+             1.5  train  465.760214 195.108777  270.651438
+             1.5   test -186.453678  23.640063 -210.093741
+             2.0  train  465.760214 260.145036  205.615179
+             2.0   test -186.453678  31.520085 -217.973762
+             3.0  train  465.760214 390.217553   75.542661
+             3.0   test -186.453678  47.280127 -233.733805
+             4.0  train  465.760214 520.290071  -54.529857
+             4.0   test -186.453678  63.040169 -249.493847
 ```

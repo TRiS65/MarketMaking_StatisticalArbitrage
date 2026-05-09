@@ -1,2 +1,2 @@
 decision,reason,horizon_min,top_n,basket_symbols,threshold_pred_bps,edge_mult,train_net_bps,validation_net_bps,test_net_bps,test_trades
-no_trade,no validation-positive threshold with enough trades,60,5,NVDA AAPL MSFT AVGO MU,12.0,2.5,-14.900885820111858,-213.33061084637083,-47.30002909048786,40.0
+no_trade,validation-positive but test-negative,15,5,NVDA AAPL MSFT AVGO MU,0.5,2.5,-346.38331579558826,9.18517183166575,-133.28743083619827,26.0

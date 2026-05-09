@@ -1,11 +1,12 @@
-# Market Making and Statistical Arbitrage: XLK New-Data Study
+# Market Making and Statistical Arbitrage: XLK Final-Data Study
 
-This repository now targets the expanded WRDS TAQ dataset:
+This repository now targets the 12-month WRDS TAQ dataset:
 
-- sample: `2025-11-01` to `2026-05-01`
+- sample: `2025-05-01` to `2026-05-01`
 - frequency: raw millisecond TAQ, aggregated to one-minute regular-hours bars
 - universe: `XLK` plus the top 20 names from the `0501` XLK holdings file
-- raw data path: `data/newdata`
+- raw data path: `data/finaldata`
+- default split: train before `2026-02-01`, validation before `2026-03-01`, test before `2026-05-01`
 
 The project separates two claims:
 
@@ -16,19 +17,19 @@ The current research line follows the professor feedback: define variables preci
 
 ## Main Workflow
 
-Build the new minute panel from the raw gz files:
+Build the final minute panel from the raw gz files:
 
 ```bash
 python3 scripts/build_dataset.py --force
 ```
 
-Run the new-data research pipeline:
+Run the current research pipeline:
 
 ```bash
 python3 scripts/run_newdata_pipeline.py --quick
 ```
 
-The raw build scans more than 90GB of gzipped TAQ data, so it is intentionally separate from the experiment pipeline.
+The raw build scans about 169GB of gzipped TAQ data, so it is intentionally separate from the experiment pipeline.
 
 ## Key Scripts
 
@@ -42,7 +43,7 @@ The raw build scans more than 90GB of gzipped TAQ data, so it is intentionally s
 | `scripts/run_empirical_execution_model.py` | Empirical bid/ask, latency, passive-fill markout, and capacity cost calibration |
 | `scripts/run_execution_optimized_backtest.py` | Minute-level maker/taker execution screen for pair candidates |
 | `scripts/run_fixed_bps_timing_controls.py` | Expanded-sample controls for the fixed-bps XLK-only timing candidate shape |
-| `scripts/run_timing_robustness.py` | Current top-5 XLK-only timing robustness with Mar-Apr holdout and exact bid/ask latency audit |
+| `scripts/run_timing_robustness.py` | Current top-5 XLK-only timing robustness with metadata test holdout and exact bid/ask latency audit |
 | `scripts/run_regime_shift_diagnostics.py` | Regime-shift audit explaining whether poor timing comes from linkage, costs, or signal direction |
 | `scripts/run_regime_gate_experiments.py` | Trend/premium-persistence no-trade gates for the April timing failure |
 | `scripts/run_regime_classifier.py` | Supervised mean-reversion / trend-continuation / no-trade classifier |
@@ -122,13 +123,13 @@ The new diagnostics include OU/Avellaneda-Lee style mean-reversion scores. The n
 | `output/tables/empirical_passive_fill_model.csv` | Last-trade touch-fill and markout proxy by symbol/time/spread/imbalance bucket |
 | `output/tables/execution_optimized_selection.csv` | Maker/taker execution-screen selection and OOS audit |
 | `output/tables/fixed_bps_timing_selection.csv` | Expanded-sample fixed-bps timing decision and controls summary |
-| `output/tables/timing_robustness_decision.csv` | Current Jan-Feb-selected timing decision with Mar-Apr holdout |
+| `output/tables/timing_robustness_decision.csv` | Current train/validation-selected timing decision with metadata test holdout |
 | `output/tables/timing_robustness_target_rule.csv` | Re-audit of `micro_shrink_0.75_cw10d_e60_x0_mh240` on the current top-5 basket |
 | `output/tables/regime_shift_summary.csv` | Train/test regime diagnostics for XLK/basket linkage, spread, signal scale, and signal IC |
 | `output/tables/regime_target_rule_monthly_pnl.csv` | Monthly gross/cost/net attribution for the named timing candidate |
-| `output/tables/regime_gate_selection.csv` | Jan-Feb-selected regime gate and Mar-Apr holdout audit |
+| `output/tables/regime_gate_selection.csv` | Train/validation-selected regime gate and metadata test holdout audit |
 | `output/tables/regime_gate_monthly.csv` | Monthly side anatomy for baseline, side-only diagnostics, and selected/best gates |
-| `output/tables/regime_classifier_selection.csv` | Supervised classifier selection and Mar-Apr holdout audit |
+| `output/tables/regime_classifier_selection.csv` | Supervised classifier selection and metadata test holdout audit |
 | `output/tables/regime_classifier_controls.csv` | Sign-flip and active directional controls for selected classifier |
 | `output/tables/microstructure_refinement_horizon_summary.csv` | Order-flow/spread/volatility/impact timing horizon sweep |
 | `output/tables/loss_streamline_decision.csv` | Final active/no-trade policy summary by research path |
@@ -144,24 +145,24 @@ Use this wording unless the new market-neutral results clearly overturn it:
 
 > Market-neutral XLK-vs-basket arbitrage remains fragile under realistic TAQ execution assumptions. The more promising direction is to use the sparse/top-holdings basket as a fair-value signal and trade XLK only. This timing strategy is not market neutral, so it must be reported with directional controls, sign-flip controls, circular-shift tests, and cost-scenario sensitivity.
 
-## New-Data Quick Results Snapshot
+## Final-Data Quick Results Snapshot
 
-The first new-data quick run gives a more conservative conclusion than the old Jan-Mar sample:
+The 12-month finaldata run gives a more conservative conclusion than the old shorter samples:
 
 | Experiment | Train / Validation | Test | Interpretation |
 |---|---:|---:|---|
-| Sparse market-neutral basket, half-spread approximation | train `+70.96` bps | test `-39.56` bps | Fails OOS |
-| Sparse market-neutral basket, bid/ask boundary audit | train `-26.14` bps | test `-125.45` bps | Fails after stricter execution accounting |
+| Sparse market-neutral basket, half-spread approximation | train `-178.81` bps | test `+2.26` bps | Tiny test gain does not matter because train fails; no-trade remains benchmark |
+| Sparse market-neutral basket, bid/ask boundary audit | train `-593.42` bps | test `-17.32` bps | Fails under actual quote-boundary execution |
 | Fixed top-holdings XLK-only timing | validation `+205.74` bps | test `-852.43` bps | Old fixed timing rule does not transfer |
-| Robust alpha quick selected XLK-only timing | train `+472.55` bps | test `-17.73` bps | Better than fixed rule, but no-trade still wins test |
+| Robust alpha quick selected XLK-only timing | train `+335.69` bps | test `-202.21` bps | Train-positive but fails OOS |
 | Top-20 pair method diagnostics after no-trade gate | varies | `0.00` bps | Every validation-selected pair method fails at least one gate |
 | Execution-optimized pair screen | validation candidate `+3083.69` bps | test `-3416.85` bps | Validation false positive; final policy remains no-trade |
-| Expanded fixed-bps XLK-only timing controls | train `-2115.46` bps, validation `-45.13` bps | test `-977.24` bps | Old fixed-bps candidate shape does not transfer |
-| Current top-5 timing robustness re-audit | no Jan-Feb stability rule passes | `0.00` bps selected policy | No active timing rule selected |
-| Named timing candidate `micro_shrink_0.75_cw10d_e60_x0_mh240` | train `-142.16` bps | Mar-Apr `-894.79` bps | March-only positive result does not survive April/current basket |
-| Regime-shift audit | corr `0.655` train vs `0.634` test; beta `0.614` vs `0.617` | April short gross `-851` bps before costs | Linkage does not collapse; April is a directional/signal-regime failure |
-| Regime-gate repair | selected Jan-Feb gate train `+373.61` bps | Mar-Apr `-131.36` bps, 2x cost `-210.74` bps | Premium-persistence gates reduce April damage but do not pass final active gate |
-| Supervised regime classifier | Feb validation `+114.63` bps | Mar-Apr `-982.51` bps, 2x cost `-1790.10` bps | Learns some validation states but fails holdout and costs; no active claim |
+| Expanded fixed-bps XLK-only timing controls | train `-2572.04` bps, validation `-45.13` bps | test `-977.24` bps | Old fixed-bps candidate shape does not transfer |
+| Current top-5 timing robustness re-audit | no train/validation stability rule passes | `0.00` bps selected policy | No active timing rule selected |
+| Named timing candidate `micro_shrink_0.75_cw10d_e60_x0_mh240` | train `-2695.47` bps | test `-894.79` bps | Earlier positive result does not survive finaldata/current basket |
+| Regime-shift audit | corr `0.613` train vs `0.634` test; beta `0.531` vs `0.617` | April short gross about `-851` bps before costs | Linkage does not collapse; April is a directional/signal-regime failure |
+| Regime-gate repair | selected train/validation gate train `+79.63` bps, validation `+280.21` bps | test `-131.36` bps, 2x cost `-210.74` bps | Premium-persistence gates reduce April damage but do not pass final active gate |
+| Supervised regime classifier | validation `+104.32` bps | test `-271.67` bps, 2x cost `-931.31` bps | Learns some validation states but fails holdout and costs; no active claim |
 | Microstructure feature timing refinement | no horizon passes validation gate | best reported test `+0.39` bps with validation `-40.85` bps | Order-flow/spread/volatility features do not rescue timing as a linear rule |
 
 The professor robustness table does find pair/spread definitions where no-cost and 0.25-spread results are strongly positive, while 0.50-spread taker costs often erase the edge. That is the main empirical evidence that execution quality is now the central research question.
@@ -180,7 +181,7 @@ also remains no-trade for market-neutral pair trading.
 
 Legacy `profit_search_*` outputs identify a useful fixed-bps sparse5 timing
 candidate shape, but those files predate the expanded top-20 pipeline.  They are
-not final new-data evidence until regenerated and passed through sign-flip,
+not final finaldata evidence until regenerated and passed through sign-flip,
 always-long/short, circular-shift, latency, and cost-stress controls.
 
 The regenerated expanded-sample fixed-bps timing controls reject that candidate
@@ -212,20 +213,21 @@ so the next refinement should be a regime/trend gate rather than another
 symmetric z-score tweak.
 
 The regime-gate repair experiment confirms the diagnosis but does not yet create
-an honest active strategy.  A premium-persistence gate selected on Jan-Feb earns
-`+373.61` bps in train and turns April positive at `+64.02` bps, but March loses
-`-195.38` bps and the full Mar-Apr holdout remains `-131.36` bps.  Side-only
-diagnostics make the regime flip explicit: short-only earns `+195.74` bps in
-Jan-Feb but loses `-956.95` bps in Mar-Apr, while long-only is positive in
-Mar-Apr but negative in train.  The correct policy is still no-trade until a
-regime classifier survives a later holdout.
+an honest active strategy.  A premium-persistence gate selected on the metadata
+train/validation windows earns `+79.63` bps in train and `+280.21` bps in
+validation, and it turns April positive at `+64.02` bps, but March loses
+`-195.38` bps and the test holdout remains `-131.36` bps.  Side-only diagnostics
+make the regime flip explicit: short exposure helps in some earlier periods but
+fails badly in April, while long-only helps April but fails in train.  The
+correct policy is still no-trade until a regime classifier survives a later
+holdout.
 
 The supervised regime classifier replaces fixed gates with three states:
 mean-reversion, trend-continuation, and no-trade.  It is trained on pre-holdout
-data and selected on February validation, with an extra requirement that it beat
+data and selected on metadata validation, with an extra requirement that it beat
 active always-long/always-short controls on validation.  The selected classifier
-is validation-positive, but it loses `-982.51` bps on the Mar-Apr holdout and
-gets worse under 2x costs and 1-minute latency.  This confirms that the regime
+is validation-positive, but it loses `-271.67` bps on the test holdout and
+gets worse under 2x costs and remains fragile under 1-minute latency.  This confirms that the regime
 problem is real, but a classifier trained on the current sample is not yet a
 tradable solution.
 

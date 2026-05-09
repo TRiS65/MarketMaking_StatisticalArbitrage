@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Build one-minute research data from WRDS TAQ quote/trade extracts.
 
-Default configuration is the new project dataset:
+Default configuration is the final project dataset:
 
-    data/newdata/*.csv.gz
-    2025-11-01 <= DATE < 2026-05-01
+    data/finaldata/*.csv.gz
+    2025-05-01 <= DATE < 2026-05-01
     XLK + top 20 XLK holdings from data/0501_holdings-daily-us-en-xlk.xlsx
 
 The raw TAQ files are too large for pandas.  DuckDB scans the gzipped CSVs,
@@ -35,10 +35,10 @@ MAX_ROLLING_PRICE_DEVIATION_BPS = 500.0
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build minute panel for XLK TAQ study")
-    parser.add_argument("--raw-dir", type=Path, default=DATA / "newdata")
+    parser.add_argument("--raw-dir", type=Path, default=DATA / "finaldata")
     parser.add_argument("--holdings", type=Path, default=DATA / "0501_holdings-daily-us-en-xlk.xlsx")
     parser.add_argument("--top-n", type=int, default=20)
-    parser.add_argument("--start", type=str, default="2025-11-01")
+    parser.add_argument("--start", type=str, default="2025-05-01")
     parser.add_argument("--end", type=str, default="2026-05-01")
     parser.add_argument("--train-end", type=str, default="2026-02-01")
     parser.add_argument("--validation-end", type=str, default="2026-03-01")
@@ -183,8 +183,9 @@ def aggregate_raw(
     end: str,
     force: bool,
 ) -> tuple[Path, Path]:
-    quote_out = PROCESSED / "minute_quotes_new.parquet"
-    trade_out = PROCESSED / "minute_trades_new.parquet"
+    tag = raw_dir_tag(quote_file.parent)
+    quote_out = PROCESSED / f"minute_quotes_{tag}.parquet"
+    trade_out = PROCESSED / f"minute_trades_{tag}.parquet"
     con = duckdb_connection()
     if force or not quote_out.exists():
         if quote_out.exists():
@@ -201,6 +202,31 @@ def aggregate_raw(
     else:
         print(f"[skip] {trade_out.relative_to(ROOT)} exists")
     return quote_out, trade_out
+
+
+def raw_dir_tag(raw_dir: Path) -> str:
+    return "".join(ch.lower() if ch.isalnum() else "_" for ch in raw_dir.name).strip("_") or "raw"
+
+
+def metadata_mismatch(args: argparse.Namespace) -> bool:
+    path = PROCESSED / "dataset_metadata.json"
+    if not path.exists():
+        return False
+    try:
+        old = json.loads(path.read_text())
+    except Exception:
+        return True
+    return any(
+        [
+            old.get("dataset") != args.raw_dir.name,
+            old.get("raw_dir") != args.raw_dir.as_posix(),
+            old.get("start") != args.start,
+            old.get("end") != args.end,
+            old.get("train_end") != args.train_end,
+            old.get("validation_end") != args.validation_end,
+            old.get("test_end") != args.test_end,
+        ]
+    )
 
 
 def build_panel(quote_file: Path, trade_file: Path, symbols: list[str], force: bool) -> None:
@@ -239,6 +265,15 @@ def build_panel(quote_file: Path, trade_file: Path, symbols: list[str], force: b
         panel[f"log_{col}"] = np.log(panel[col].where(panel[col] > 0))
         panel[f"ret_{col}"] = panel.groupby("symbol")[f"log_{col}"].diff()
 
+    # Keep the distributable processed panel below GitHub's single-file limit.
+    # The raw TAQ inputs remain the source of truth; float32 precision is ample
+    # for one-minute bps-level diagnostics and keeps the final panel laptop-safe.
+    for col in panel.select_dtypes(include=["float64"]).columns:
+        panel[col] = panel[col].astype("float32")
+    for col in ["quote_updates", "trade_count"]:
+        if col in panel:
+            panel[col] = panel[col].fillna(0).astype("int32")
+    panel["symbol"] = panel["symbol"].astype("category")
     panel.to_parquet(panel_file, index=False)
     diag = (
         panel.groupby("symbol")
@@ -270,7 +305,7 @@ def write_metadata(args: argparse.Namespace, symbols: list[str], quote_file: Pat
             holdings["used_in_clean_panel"] = holdings["symbol"].astype(str).isin(available)
             holdings.to_csv(holdings_path, index=False)
     meta = {
-        "dataset": "newdata",
+        "dataset": args.raw_dir.name,
         "raw_dir": args.raw_dir.as_posix(),
         "quote_file": quote_file.as_posix(),
         "trade_file": trade_file.as_posix(),
@@ -292,11 +327,14 @@ def write_metadata(args: argparse.Namespace, symbols: list[str], quote_file: Pat
 def main() -> None:
     args = parse_args()
     ensure_dirs()
+    dataset_changed = metadata_mismatch(args)
+    if dataset_changed and not args.force:
+        print("[metadata] existing processed panel belongs to a different raw window; rebuilding affected outputs")
     holdings = load_holdings(args.holdings, args.top_n)
     symbols = [ETF] + holdings["symbol"].tolist()
     quote_file, trade_file = find_raw_files(args.raw_dir)
-    quote_out, trade_out = aggregate_raw(quote_file, trade_file, symbols, args.start, args.end, args.force)
-    build_panel(quote_out, trade_out, symbols, args.force)
+    quote_out, trade_out = aggregate_raw(quote_file, trade_file, symbols, args.start, args.end, args.force or dataset_changed)
+    build_panel(quote_out, trade_out, symbols, args.force or dataset_changed)
     write_metadata(args, symbols, quote_file, trade_file)
 
 

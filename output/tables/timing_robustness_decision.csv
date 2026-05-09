@@ -1,2 +1,2 @@
-decision,reason,train_net_bps,test_net_bps
-no_trade,No XLK-only timing rule passed Jan-Feb train filters.,0.0,0.0
+decision,reason,train_net_bps,validation_net_bps,test_net_bps
+no_trade,No XLK-only timing rule passed train/validation filters.,0.0,0.0,0.0

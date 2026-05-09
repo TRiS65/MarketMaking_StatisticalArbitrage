@@ -8,8 +8,9 @@ This is a repair experiment for the April failure diagnosed by
 
 The experiment only changes the trade/no-trade policy around that signal.  It
 tests whether a simple trend/persistence gate can prevent the strategy from
-shorting XLK during a broad XLK + basket uptrend.  Selection is based on
-January-February only; March-April remains an out-of-sample audit.
+shorting XLK during a broad XLK + basket uptrend.  Selection is based only on
+the metadata train/validation windows; the metadata test window remains an
+out-of-sample audit.
 """
 
 from __future__ import annotations
@@ -20,7 +21,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from project_config import ETF, FIGURES, OUTPUT, TABLES
+from project_config import ETF, FIGURES, OUTPUT, TABLES, split_dates
 from run_timing_robustness import (
     TimingRule,
     align_panel,
@@ -205,18 +206,20 @@ def evaluate_strategy(
             }
         )
     row.update(summarize(frame))
-    row.update(side_stats(frame.loc[(frame.index >= "2026-03-01") & (frame.index < "2026-05-01")]))
+    _, validation_end, test_end = split_dates()
+    test_slice = frame.loc[(frame.index >= validation_end) & (frame.index < test_end)]
+    row.update(side_stats(test_slice))
     row["test_2x_cost_net_bps"] = float(
         1e4
         * (
-            frame.loc[(frame.index >= "2026-03-01") & (frame.index < "2026-05-01"), "gross_ret"].sum()
-            - 2.0 * frame.loc[(frame.index >= "2026-03-01") & (frame.index < "2026-05-01"), "cost_ret"].sum()
+            test_slice["gross_ret"].sum()
+            - 2.0 * test_slice["cost_ret"].sum()
         )
     )
     row["train_selection_score"] = (
         row["train_net_bps"]
-        + 0.75 * min(row["jan_net_bps"], row["feb_net_bps"])
-        - 0.10 * (row["jan_cost_bps"] + row["feb_cost_bps"])
+        + row["validation_net_bps"]
+        - 0.10 * (row["train_cost_bps"] + row["validation_cost_bps"])
     )
     return frame, row
 
@@ -289,17 +292,19 @@ def main() -> None:
     eligible = grid[
         (grid["strategy"] != "baseline_no_gate")
         & (grid["train_net_bps"] > 0)
+        & (grid["validation_net_bps"] > 0)
         & (grid["train_trades"] >= 20)
-        & (grid["feb_net_bps"] > -100)
+        & (grid["validation_trades"] >= 5)
     ].copy()
     if eligible.empty:
         decision = pd.DataFrame(
             [
                 {
                     "decision": "no_trade",
-                    "reason": "No regime gate passed Jan-Feb selection filters.",
+                    "reason": "No regime gate passed train/validation selection filters.",
                     "selected_strategy": "",
                     "train_net_bps": 0.0,
+                    "validation_net_bps": 0.0,
                     "test_net_bps": 0.0,
                     "test_2x_cost_net_bps": 0.0,
                 }
@@ -314,7 +319,7 @@ def main() -> None:
             [
                 {
                     "decision": decision_label,
-                    "reason": "Selected on Jan-Feb only; Mar-Apr is holdout audit.",
+                    "reason": "Selected on train/validation only; test is holdout audit.",
                     "selected_strategy": selected_name,
                     "gate_mode": selected["gate_mode"],
                     "state_kind": selected["state_kind"],
@@ -322,6 +327,7 @@ def main() -> None:
                     "trend_threshold_bps": selected["trend_threshold_bps"],
                     "gate_action": selected["gate_action"],
                     "train_net_bps": selected["train_net_bps"],
+                    "validation_net_bps": selected["validation_net_bps"],
                     "jan_net_bps": selected["jan_net_bps"],
                     "feb_net_bps": selected["feb_net_bps"],
                     "mar_net_bps": selected["mar_net_bps"],
@@ -359,7 +365,7 @@ def main() -> None:
     plot = top.set_index("strategy")[["train_net_bps", "test_net_bps"]]
     plot.plot(kind="barh", ax=ax)
     ax.axvline(0, color="black", linewidth=0.8)
-    ax.set_title("Regime gate candidates selected/ranked by Jan-Feb only")
+    ax.set_title("Regime gate candidates ranked by train/validation only")
     ax.set_xlabel("net bps")
     fig.tight_layout()
     fig.savefig(FIGURES / "regime_gate_comparison.png", dpi=180)
@@ -370,7 +376,7 @@ def main() -> None:
         "The target timing signal is fixed.  These experiments only test trade/no-trade gates around the April failure mode: shorting XLK while both XLK and the sparse basket are in an intraday uptrend.\n\n"
         "## Selection\n\n"
         + decision.to_markdown(index=False)
-        + "\n\n## Top Jan-Feb Ranked Gates\n\n"
+        + "\n\n## Top Train/Validation Ranked Gates\n\n"
         + grid.head(15).to_markdown(index=False)
         + "\n\n## Monthly Anatomy\n\n"
         + monthly.to_markdown(index=False)

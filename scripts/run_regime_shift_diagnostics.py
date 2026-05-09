@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from project_config import ETF, MINUTES_PER_DAY, PROCESSED, TABLES, OUTPUT, FIGURES
+from project_config import ETF, MINUTES_PER_DAY, PROCESSED, TABLES, OUTPUT, FIGURES, project_window, split_dates
 from run_timing_robustness import (
     TimingRule,
     align_panel,
@@ -87,6 +87,11 @@ def monthly_pnl(frame: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def month_labels(start: pd.Timestamp, end: pd.Timestamp) -> list[str]:
+    months = pd.period_range(start=start.to_period("M"), end=(end - pd.Timedelta(days=1)).to_period("M"), freq="M")
+    return [str(m) for m in months]
+
+
 def main() -> None:
     TABLES.mkdir(parents=True, exist_ok=True)
     FIGURES.mkdir(parents=True, exist_ok=True)
@@ -151,21 +156,27 @@ def main() -> None:
     ic = pd.DataFrame(ic_rows)
     pnl = monthly_pnl(frame)
 
-    train_months = ["2026-01", "2026-02"]
-    test_months = ["2026-03", "2026-04"]
+    sample_start, _ = project_window()
+    train_end, validation_end, test_end = split_dates()
+    train_months = month_labels(sample_start, train_end)
+    validation_months = month_labels(train_end, validation_end)
+    test_months = month_labels(validation_end, test_end)
     summary_rows = []
     for metric in ["xlk_basket_corr_1m", "xlk_on_basket_beta_1m", "residual_vol_bps_1m", "median_xlk_spread_bps", "signal_std_bps"]:
         tr = market.loc[market["month"].isin(train_months), metric].mean()
+        va = market.loc[market["month"].isin(validation_months), metric].mean()
         te = market.loc[market["month"].isin(test_months), metric].mean()
-        summary_rows.append({"metric": metric, "train_avg": tr, "test_avg": te, "test_minus_train": te - tr})
+        summary_rows.append({"metric": metric, "train_avg": tr, "validation_avg": va, "test_avg": te, "test_minus_train": te - tr})
     for h in [5, 15, 30, 60]:
         sub = ic[ic["horizon_min"] == h]
         tr = sub.loc[sub["month"].isin(train_months), "alpha_ic_corr"].mean()
+        va = sub.loc[sub["month"].isin(validation_months), "alpha_ic_corr"].mean()
         te = sub.loc[sub["month"].isin(test_months), "alpha_ic_corr"].mean()
-        summary_rows.append({"metric": f"alpha_ic_{h}m", "train_avg": tr, "test_avg": te, "test_minus_train": te - tr})
+        summary_rows.append({"metric": f"alpha_ic_{h}m", "train_avg": tr, "validation_avg": va, "test_avg": te, "test_minus_train": te - tr})
         tr_edge = sub.loc[sub["month"].isin(train_months), "contrarian_decile_edge_bps"].mean()
+        va_edge = sub.loc[sub["month"].isin(validation_months), "contrarian_decile_edge_bps"].mean()
         te_edge = sub.loc[sub["month"].isin(test_months), "contrarian_decile_edge_bps"].mean()
-        summary_rows.append({"metric": f"contrarian_decile_edge_{h}m", "train_avg": tr_edge, "test_avg": te_edge, "test_minus_train": te_edge - tr_edge})
+        summary_rows.append({"metric": f"contrarian_decile_edge_{h}m", "train_avg": tr_edge, "validation_avg": va_edge, "test_avg": te_edge, "test_minus_train": te_edge - tr_edge})
     summary = pd.DataFrame(summary_rows)
 
     market.to_csv(TABLES / "regime_monthly_market_state.csv", index=False)

@@ -4,54 +4,54 @@
 
 | research_path                       | decision                    | reason                                                                                                                                             |   train_or_validation_net_bps |   test_net_bps |   raw_test_net_bps_before_gate |
 |:------------------------------------|:----------------------------|:---------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------:|---------------:|-------------------------------:|
-| market_neutral_pair_or_basket       | no_trade                    | validation-selected active pair/basket rules fail no-trade gate or lose after costs                                                                |                        nan    |           0    |                      -53500.6  |
-| robust_alpha_suite_selected         | no_trade                    | selected robust-alpha rule loses OOS or does not beat no-trade                                                                                     |                        472.55 |         -17.73 |                         -17.73 |
+| market_neutral_pair_or_basket       | no_trade                    | validation-selected active pair/basket rules fail no-trade gate or lose after costs                                                                |                        nan    |           0    |                      -51353.3  |
+| robust_alpha_suite_selected         | no_trade                    | selected robust-alpha rule loses OOS or does not beat no-trade                                                                                     |                        335.69 |        -202.21 |                        -202.21 |
 | fixed_bps_xlk_only_timing_candidate | legacy_candidate_shape_only | legacy profit-search output is Jan-Feb positive, but it predates expanded top-20 controls and is not final evidence                                |                        456.48 |         613.35 |                         613.35 |
-| expanded_fixed_bps_xlk_only_timing  | no_trade                    | train_or_validation_net<=0;test_net<=0;2x_cost_test<=0;latency1_test<=0;does_not_beat_directional_control;sign_flip_not_worse;circular_pvalue>0.10 |                      -2115.46 |        -977.24 |                        -977.24 |
-| timing_robustness_current_selection | no_trade                    | No XLK-only timing rule passed Jan-Feb train filters.                                                                                              |                          0    |           0    |                           0    |
-| named_timing_candidate_micro075_e60 | no_trade                    | named candidate audited on current top-5 basket with Mar-Apr test                                                                                  |                       -142.16 |        -894.79 |                        -894.79 |
-| regime_gated_timing_repair          | no_trade                    | Selected on Jan-Feb only; Mar-Apr is holdout audit. Script label: diagnostic_only.                                                                 |                        373.61 |        -131.36 |                        -131.36 |
-| regime_classifier_timing            | no_trade                    | selected on February validation only; Mar-Apr is holdout. Script label: diagnostic_only.                                                           |                        114.63 |        -982.51 |                        -982.51 |
+| expanded_fixed_bps_xlk_only_timing  | no_trade                    | train_or_validation_net<=0;test_net<=0;2x_cost_test<=0;latency1_test<=0;does_not_beat_directional_control;sign_flip_not_worse;circular_pvalue>0.10 |                      -2572.04 |        -977.24 |                        -977.24 |
+| timing_robustness_current_selection | no_trade                    | No XLK-only timing rule passed train/validation filters.                                                                                           |                          0    |           0    |                           0    |
+| named_timing_candidate_micro075_e60 | no_trade                    | named candidate audited on current top-5 basket with metadata test                                                                                 |                      -2695.47 |        -894.79 |                        -894.79 |
+| regime_gated_timing_repair          | no_trade                    | Selected on train/validation only; test is holdout audit. Script label: diagnostic_only.                                                           |                         79.63 |        -131.36 |                        -131.36 |
+| regime_classifier_timing            | no_trade                    | selected on metadata validation only; test is holdout. Script label: diagnostic_only.                                                              |                        104.32 |        -271.67 |                        -271.67 |
 
 ## 1. Market-neutral / pair-trading PnL attribution
 
 | method         |   selected_pairs |   gate_pass_pairs |   raw_validation_net_bps |   raw_test_net_bps |   raw_test_net_per_trade_bps |   raw_positive_test_pairs |   gate_test_net_bps |   test_trades |
 |:---------------|-----------------:|------------------:|-------------------------:|-------------------:|-----------------------------:|--------------------------:|--------------------:|--------------:|
-| baseline       |               19 |                 0 |                 -1494.03 |          -14985    |                        -5.81 |                         0 |                   0 |          2578 |
-| coint_filter   |                1 |                 0 |                   211.67 |            -188.99 |                        -2.01 |                         0 |                   0 |            94 |
-| combined       |                1 |                 0 |                   -47.3  |            -428.48 |                        -5.79 |                         0 |                   0 |            74 |
-| kalman_lagged  |               19 |                 0 |                 -3911.12 |          -15984.3  |                        -5.16 |                         1 |                   0 |          3097 |
-| passive_stress |               19 |                 0 |                   190.57 |          -12166.2  |                        -4.35 |                         0 |                   0 |          2794 |
-| sscore_ou_gate |               19 |                 0 |                  -417.6  |           -9747.57 |                        -6.99 |                         1 |                   0 |          1394 |
+| baseline       |               20 |                 0 |                 -1359.79 |          -14635.7  |                        -5.14 |                         0 |                   0 |          2848 |
+| coint_filter   |                3 |                 0 |                  -250.23 |            -837.03 |                        -2.6  |                         0 |                   0 |           322 |
+| combined       |                3 |                 0 |                  -185.59 |            -979.44 |                        -4.49 |                         0 |                   0 |           218 |
+| kalman_lagged  |               20 |                 0 |                 -3643.45 |          -12823.4  |                        -4.92 |                         0 |                   0 |          2609 |
+| passive_stress |               20 |                 0 |                   421    |           -9767.92 |                        -3.32 |                         0 |                   0 |          2943 |
+| sscore_ou_gate |               20 |                 0 |                 -2270.74 |          -12309.9  |                        -4.9  |                         0 |                   0 |          2513 |
 
 Interpretation: if gate_test_net_bps is zero, the economically selected policy is no-trade. Negative raw_test_net_bps indicates that model filters reduce losses but do not create tradable alpha.
 
 ## 2. Exit-reason attribution
 
-| sample     | exit_reason   |   trades |   gross_bps |   cost_bps |   net_bps |   net_per_trade_bps |
-|:-----------|:--------------|---------:|------------:|-----------:|----------:|--------------------:|
-| test       | reversion     |     5917 |    67711.8  |   23283.3  |  44428.4  |                7.51 |
-| test       | stop_loss     |      721 |    -3930.87 |    2181.59 |  -6112.46 |               -8.48 |
-| test       | eod           |     9164 |    -7864.84 |   32902.1  | -40767    |               -4.45 |
-| test       | max_hold      |    25910 |     2223.73 |   77601.4  | -75377.7  |               -2.91 |
-| train      | reversion     |     7685 |    77824    |   33425.9  |  44398    |                5.78 |
-| train      | eod           |    10049 |    10408.3  |   33840.9  | -23432.6  |               -2.33 |
-| train      | max_hold      |    28423 |   -11718.9  |   85040.4  | -96759.3  |               -3.4  |
-| train      | stop_loss     |    12699 |   -49722.9  |   49762.8  | -99485.8  |               -7.83 |
-| validation | reversion     |     2168 |    25831.5  |    8168.59 |  17662.9  |                8.15 |
-| validation | stop_loss     |      689 |    -4023.38 |    2883.27 |  -6906.65 |              -10.02 |
-| validation | eod           |     2530 |     4102.9  |   11848.1  |  -7745.2  |               -3.06 |
-| validation | max_hold      |     9266 |     -465.74 |   24523.8  | -24989.6  |               -2.7  |
+| sample     | exit_reason   |   trades |   gross_bps |   cost_bps |    net_bps |   net_per_trade_bps |
+|:-----------|:--------------|---------:|------------:|-----------:|-----------:|--------------------:|
+| test       | reversion     |     7301 |    85032    |   27127    |   57905    |                7.93 |
+| test       | stop_loss     |     1872 |    -8500.41 |    5944.13 |  -14444.5  |               -7.72 |
+| test       | eod           |    10788 |    -9659.69 |   37778.5  |  -47438.2  |               -4.4  |
+| test       | max_hold      |    29542 |     2685.67 |   84236.9  |  -81551.2  |               -2.76 |
+| train      | reversion     |    35924 |   334140    |  164990    |  169150    |                4.71 |
+| train      | eod           |    33474 |    66647.6  |  126953    |  -60305.3  |               -1.8  |
+| train      | stop_loss     |    32436 |  -105663    |  126096    | -231759    |               -7.15 |
+| train      | max_hold      |    86963 |    -6561.76 |  248357    | -254919    |               -2.93 |
+| validation | reversion     |     2729 |    33648.3  |    9341.57 |   24306.7  |                8.91 |
+| validation | eod           |     2948 |     5033.94 |   14015.5  |   -8981.57 |               -3.05 |
+| validation | stop_loss     |     5536 |    -8100.11 |   16982.5  |  -25082.6  |               -4.53 |
+| validation | max_hold      |    10575 |     2334.24 |   27489.2  |  -25154.9  |               -2.38 |
 
 Interpretation: profitable reversion exits combined with negative max-hold / stop-loss / EOD exits usually means entry thresholds are too loose and residuals do not revert quickly enough.
 
 ## 3. Robust-alpha selected rule
 
-Selected strategy: `xlk_only_timing_mid_ridge_pos_k3_zscore_mean_e3_x0.5_h0_contra_nogate_cw1950_mh180`
-Train net: 472.55 bps; test net: -17.73 bps.
-Test gross/cost: 2.87 / 20.60 bps; break-even cost multiplier: 0.139x.
-Always-long control test net: -11.46 bps. If this is close to or better than selected, timing alpha is not established.
-Circular-shift p-value proxy: 0.244.
+Selected strategy: `xlk_only_timing_micro_conf_0.5_ridge_pos_k3_zscore_mean_e3_x0.5_h0_contra_nogate_cw1950_mh180`
+Train net: 335.69 bps; test net: -202.21 bps.
+Test gross/cost: -186.45 / 15.76 bps; break-even cost multiplier: -11.831x.
+Always-long control test net: 81.08 bps. If this is close to or better than selected, timing alpha is not established.
+Circular-shift p-value proxy: 0.337.
 
 ## 4. Fixed-bps XLK-only timing candidate audit
 
@@ -59,7 +59,7 @@ Expanded top-20 regeneration:
 
 | decision   | reason                                                                                                                                             | basket_symbols         |   train_net_bps |   validation_net_bps |   test_net_bps |   test_2x_cost_net_bps |   test_latency1_net_bps |   circular_pvalue |
 |:-----------|:---------------------------------------------------------------------------------------------------------------------------------------------------|:-----------------------|----------------:|---------------------:|---------------:|-----------------------:|------------------------:|------------------:|
-| no_trade   | train_or_validation_net<=0;test_net<=0;2x_cost_test<=0;latency1_test<=0;does_not_beat_directional_control;sign_flip_not_worse;circular_pvalue>0.10 | NVDA AAPL MSFT AVGO MU |        -2115.46 |               -45.13 |        -977.24 |               -1211.91 |                -1034.28 |               0.8 |
+| no_trade   | train_or_validation_net<=0;test_net<=0;2x_cost_test<=0;latency1_test<=0;does_not_beat_directional_control;sign_flip_not_worse;circular_pvalue>0.10 | NVDA AAPL MSFT AVGO MU |        -2572.04 |               -45.13 |        -977.24 |               -1211.91 |                -1034.28 |              0.66 |
 
 Legacy profit-search screen:
 
@@ -76,113 +76,113 @@ Interpretation: a positive fixed-bps timing candidate is not the same as market-
 
 | sample     |   horizon_min |   linear_slope_bps_per_decile |   decile0_future_bps |   decile9_future_bps |   best_decile |   best_decile_future_bps |
 |:-----------|--------------:|------------------------------:|---------------------:|---------------------:|--------------:|-------------------------:|
-| test       |             1 |                         -0.02 |                 0.37 |                -0.2  |             0 |                     0.37 |
-| test       |             5 |                         -0.09 |                 1.88 |                -1    |             6 |                     1.96 |
-| test       |            15 |                         -0.13 |                 4.64 |                -2.73 |             6 |                     5.12 |
-| test       |            30 |                         -0.09 |                 8.46 |                -4.52 |             6 |                     8.86 |
-| test       |            60 |                          0.01 |                16.07 |                -6.74 |             7 |                    17.06 |
-| train      |             1 |                          0    |                 0.03 |                 0.1  |             1 |                     0.12 |
-| train      |             5 |                          0.03 |                 0.39 |                 0.71 |             9 |                     0.71 |
-| train      |            15 |                          0.09 |                 0.79 |                 2.04 |             9 |                     2.04 |
-| train      |            30 |                          0.19 |                 1.72 |                 4.03 |             9 |                     4.03 |
-| train      |            60 |                          0.36 |                 4.93 |                 8.13 |             9 |                     8.13 |
-| validation |             1 |                         -0    |                -0.45 |                -0.66 |             5 |                     0.3  |
-| validation |             5 |                          0    |                -1.47 |                -2.79 |             6 |                     2.15 |
-| validation |            15 |                          0.01 |                -4.17 |                -7.3  |             6 |                     7.04 |
-| validation |            30 |                          0    |                -6.1  |               -12.79 |             6 |                    13.59 |
-| validation |            60 |                         -0.01 |                -8.06 |               -20.5  |             6 |                    15.17 |
+| test       |             1 |                         -0.02 |                 0.4  |                -0.23 |             0 |                     0.4  |
+| test       |             5 |                         -0.06 |                 1.86 |                -0.93 |             0 |                     1.86 |
+| test       |            15 |                         -0.06 |                 4.79 |                -2.43 |             0 |                     4.79 |
+| test       |            30 |                          0.03 |                 8.65 |                -4.7  |             7 |                     9.46 |
+| test       |            60 |                          0.21 |                15.21 |                -7.6  |             7 |                    17.52 |
+| train      |             1 |                         -0.01 |                 0.03 |                 0.02 |             1 |                     0.12 |
+| train      |             5 |                         -0.01 |                 0.02 |                 0.27 |             1 |                     0.68 |
+| train      |            15 |                         -0.02 |                 0.18 |                 0.77 |             1 |                     1.8  |
+| train      |            30 |                         -0.03 |                 0.22 |                 1.39 |             1 |                     3.33 |
+| train      |            60 |                         -0.05 |                 0.56 |                 2.98 |             1 |                     5.47 |
+| validation |             1 |                         -0    |                -0.42 |                -0.67 |             6 |                     0.28 |
+| validation |             5 |                          0.01 |                -1.56 |                -2.81 |             6 |                     2.21 |
+| validation |            15 |                          0.02 |                -3.76 |                -7.32 |             6 |                     6.7  |
+| validation |            30 |                         -0    |                -6.09 |               -12.82 |             6 |                    13.25 |
+| validation |            60 |                         -0.09 |               -11.99 |               -20.55 |             6 |                    14.41 |
 
 Interpretation: a non-monotone or sign-flipping decile curve means the signal should not be traded as a symmetric z-score. Prefer fixed-bps thresholds, asymmetric tails, or a no-trade gate.
 
 ## 6. Current timing robustness / named candidate audit
 
-Current Jan-Feb-selected timing decision:
+Current train/validation-selected timing decision:
 
-| decision   | reason                                                |   train_net_bps |   test_net_bps |
-|:-----------|:------------------------------------------------------|----------------:|---------------:|
-| no_trade   | No XLK-only timing rule passed Jan-Feb train filters. |               0 |              0 |
+| decision   | reason                                                   |   train_net_bps |   validation_net_bps |   test_net_bps |
+|:-----------|:---------------------------------------------------------|----------------:|---------------------:|---------------:|
+| no_trade   | No XLK-only timing rule passed train/validation filters. |               0 |                    0 |              0 |
 
 Named candidate `micro_shrink_0.75_cw10d_e60_x0_mh240` on the current top-5 basket:
 
 | strategy                             | basket_symbols         |   train_net_bps |   mar_net_bps |   apr_net_bps |   test_net_bps |   train_trades |   test_trades |
 |:-------------------------------------|:-----------------------|----------------:|--------------:|--------------:|---------------:|---------------:|--------------:|
-| micro_shrink_0.75_cw10d_e60_x0_mh240 | NVDA AAPL MSFT AVGO MU |         -142.16 |        -32.45 |       -862.35 |        -894.79 |            128 |           151 |
+| micro_shrink_0.75_cw10d_e60_x0_mh240 | NVDA AAPL MSFT AVGO MU |        -2695.47 |        -32.45 |       -862.35 |        -894.79 |            642 |           151 |
 
 Named candidate execution audit:
 
 | execution_model   |   latency_min |   train_net_bps |   mar_net_bps |   apr_net_bps |   test_net_bps |   test_trades |
 |:------------------|--------------:|----------------:|--------------:|--------------:|---------------:|--------------:|
-| halfspread        |             0 |         -142.16 |        -32.45 |       -862.35 |        -894.79 |           151 |
-| exact_bidask      |             0 |         -142.19 |        -32.4  |       -862.35 |        -894.76 |           151 |
-| exact_bidask      |             1 |         -120.78 |       -176.54 |       -913.67 |       -1090.22 |           152 |
-| exact_bidask      |             2 |         -319.42 |         88.61 |       -841.82 |        -753.22 |           152 |
-| exact_bidask      |             5 |         -267.18 |        -20.35 |       -866.28 |        -886.63 |           152 |
+| halfspread        |             0 |        -2695.47 |        -32.45 |       -862.35 |        -894.79 |           151 |
+| exact_bidask      |             0 |        -2695.46 |        -32.4  |       -862.35 |        -894.76 |           151 |
+| exact_bidask      |             1 |        -3283.71 |       -176.54 |       -913.67 |       -1090.22 |           152 |
+| exact_bidask      |             2 |        -3422.98 |         88.61 |       -841.82 |        -753.22 |           152 |
+| exact_bidask      |             5 |        -2822.45 |        -20.35 |       -866.28 |        -886.63 |           152 |
 
-Interpretation: this resolves the earlier contradiction. The old March-only positive timing result does not survive regeneration on the current expanded top-5 basket plus Mar-Apr holdout.
+Interpretation: this resolves the earlier contradiction. The old positive timing result does not survive regeneration on the current final-data top-5 basket plus metadata test holdout.
 
 ## 7. Regime-gate repair experiment
 
 Selection table:
 
-| decision        | selected_strategy                              | gate_mode   | state_kind          |   lookback_min |   trend_threshold_bps |   train_net_bps |   mar_net_bps |   apr_net_bps |   test_net_bps |   test_2x_cost_net_bps |
-|:----------------|:-----------------------------------------------|:------------|:--------------------|---------------:|----------------------:|----------------:|--------------:|--------------:|---------------:|-----------------------:|
-| diagnostic_only | two_sided_premium_persistence_lb780_thr75_flat | two_sided   | premium_persistence |            780 |                    75 |          373.61 |       -195.38 |         64.02 |        -131.36 |                -210.74 |
+| decision        | selected_strategy                              | gate_mode   | state_kind          |   lookback_min |   trend_threshold_bps |   train_net_bps |   validation_net_bps |   test_net_bps |   test_2x_cost_net_bps |
+|:----------------|:-----------------------------------------------|:------------|:--------------------|---------------:|----------------------:|----------------:|---------------------:|---------------:|-----------------------:|
+| diagnostic_only | two_sided_premium_persistence_lb780_thr75_flat | two_sided   | premium_persistence |            780 |                    75 |           79.63 |               280.21 |        -131.36 |                -210.74 |
 
 Monthly side anatomy for baseline, side-only diagnostics, and selected/best gates:
 
-| strategy                                                      | month   |   gross_bps |   cost_bps |   net_bps |   long_gross_bps |   short_gross_bps |   long_minutes |   short_minutes |
-|:--------------------------------------------------------------|:--------|------------:|-----------:|----------:|-----------------:|------------------:|---------------:|----------------:|
-| baseline_no_gate                                              | 2025-11 |     -578.95 |     326.16 |   -905.11 |          -463.51 |           -115.44 |           4584 |            1342 |
-| baseline_no_gate                                              | 2025-12 |     -961.78 |     285.37 |  -1247.15 |          -567.94 |           -393.85 |           4643 |            3426 |
-| baseline_no_gate                                              | 2026-01 |      -22.72 |     144.01 |   -166.74 |          -171.26 |            148.54 |            627 |            4973 |
-| baseline_no_gate                                              | 2026-02 |      167.89 |     143.35 |     24.54 |           -29.75 |            197.64 |           3852 |            2861 |
-| baseline_no_gate                                              | 2026-03 |      156.57 |     188.97 |    -32.4  |           101.57 |             55    |           4216 |            3046 |
-| baseline_no_gate                                              | 2026-04 |     -724.16 |     138.2  |   -862.35 |           126.88 |           -851.04 |           1010 |            6420 |
-| long_only_diagnostic                                          | 2025-11 |     -463.51 |     202.7  |   -666.21 |          -463.51 |              0    |           4584 |               0 |
-| long_only_diagnostic                                          | 2025-12 |     -567.94 |     170.01 |   -737.95 |          -567.94 |              0    |           4643 |               0 |
-| long_only_diagnostic                                          | 2026-01 |     -171.26 |      30.37 |   -201.64 |          -171.26 |              0    |            627 |               0 |
-| long_only_diagnostic                                          | 2026-02 |      -29.75 |     106.54 |   -136.3  |           -29.75 |              0    |           3852 |               0 |
-| long_only_diagnostic                                          | 2026-03 |      101.57 |     142    |    -40.43 |           101.57 |              0    |           4216 |               0 |
-| long_only_diagnostic                                          | 2026-04 |      126.88 |      24.26 |    102.62 |           126.88 |              0    |           1010 |               0 |
-| short_only_diagnostic                                         | 2025-11 |     -115.44 |     123.46 |   -238.91 |             0    |           -115.44 |              0 |            1342 |
-| short_only_diagnostic                                         | 2025-12 |     -393.85 |     115.35 |   -509.2  |             0    |           -393.85 |              0 |            3426 |
-| short_only_diagnostic                                         | 2026-01 |      148.54 |     113.64 |     34.9  |             0    |            148.54 |              0 |            4973 |
-| short_only_diagnostic                                         | 2026-02 |      197.64 |      36.8  |    160.84 |             0    |            197.64 |              0 |            2861 |
-| short_only_diagnostic                                         | 2026-03 |       55    |      46.97 |      8.03 |             0    |             55    |              0 |            3046 |
-| short_only_diagnostic                                         | 2026-04 |     -851.04 |     113.93 |   -964.97 |             0    |           -851.04 |              0 |            6420 |
-| two_sided_premium_persistence_lb780_thr75_flat                | 2025-11 |      162.08 |     186.57 |    -24.49 |           273.51 |           -111.43 |           1081 |            1261 |
-| two_sided_premium_persistence_lb780_thr75_flat                | 2025-12 |     -195.48 |      73.81 |   -269.3  |          -164.03 |            -31.46 |            802 |             476 |
-| two_sided_premium_persistence_lb780_thr75_flat                | 2026-01 |      171.84 |      78.44 |     93.4  |          -171.26 |            343.1  |            627 |            2186 |
-| two_sided_premium_persistence_lb780_thr75_flat                | 2026-02 |      362.73 |      82.52 |    280.21 |           122.76 |            239.97 |           1040 |            1025 |
-| two_sided_premium_persistence_lb780_thr75_flat                | 2026-03 |     -142.56 |      52.82 |   -195.38 |            26.85 |           -169.41 |            575 |            1232 |
-| two_sided_premium_persistence_lb780_thr75_flat                | 2026-04 |       90.58 |      26.56 |     64.02 |            87.54 |              3.04 |            539 |             439 |
-| flip_short_uptrend_multi_day_trend_premium_lb1950_thr100_flip | 2025-11 |     -578.95 |     326.16 |   -905.11 |          -463.51 |           -115.44 |           4584 |            1342 |
-| flip_short_uptrend_multi_day_trend_premium_lb1950_thr100_flip | 2025-12 |     -893.67 |     285.35 |  -1179.03 |          -533.88 |           -359.79 |           5029 |            3040 |
-| flip_short_uptrend_multi_day_trend_premium_lb1950_thr100_flip | 2026-01 |     -234.7  |     144.02 |   -378.72 |          -277.25 |             42.55 |            772 |            4828 |
-| flip_short_uptrend_multi_day_trend_premium_lb1950_thr100_flip | 2026-02 |      167.89 |     143.35 |     24.54 |           -29.75 |            197.64 |           3852 |            2861 |
-| flip_short_uptrend_multi_day_trend_premium_lb1950_thr100_flip | 2026-03 |      156.57 |     188.97 |    -32.4  |           101.57 |             55    |           4216 |            3046 |
-| flip_short_uptrend_multi_day_trend_premium_lb1950_thr100_flip | 2026-04 |      777.47 |     138.16 |    639.32 |           877.7  |           -100.22 |           6179 |            1251 |
+| strategy              | month   |   gross_bps |   cost_bps |   net_bps |   long_gross_bps |   short_gross_bps |   long_minutes |   short_minutes |
+|:----------------------|:--------|------------:|-----------:|----------:|-----------------:|------------------:|---------------:|----------------:|
+| baseline_no_gate      | 2025-05 |     -454.11 |     215.03 |   -669.14 |           126.31 |           -580.41 |           3094 |            3408 |
+| baseline_no_gate      | 2025-06 |       26.5  |     237.26 |   -210.76 |           153.88 |           -127.38 |            384 |            6935 |
+| baseline_no_gate      | 2025-07 |       37.46 |     246.5  |   -209.04 |             0    |             37.46 |              0 |            7741 |
+| baseline_no_gate      | 2025-08 |      100.11 |     168.66 |    -68.56 |            46.38 |             53.72 |           3386 |            2428 |
+| baseline_no_gate      | 2025-09 |      195.42 |     161.28 |     34.13 |           281.73 |            -86.31 |           1922 |            4603 |
+| baseline_no_gate      | 2025-10 |      456.82 |     273.97 |    182.85 |            61.69 |            395.13 |            317 |            7978 |
+| baseline_no_gate      | 2025-11 |       12.46 |     353.52 |   -341.06 |           -90.13 |            102.6  |           3062 |            2772 |
+| baseline_no_gate      | 2025-12 |     -961.78 |     285.37 |  -1247.15 |          -567.94 |           -393.85 |           4643 |            3426 |
+| baseline_no_gate      | 2026-01 |      -22.72 |     144.01 |   -166.74 |          -171.26 |            148.54 |            627 |            4973 |
+| baseline_no_gate      | 2026-02 |      167.89 |     143.35 |     24.54 |           -29.75 |            197.64 |           3852 |            2861 |
+| baseline_no_gate      | 2026-03 |      156.57 |     188.97 |    -32.4  |           101.57 |             55    |           4216 |            3046 |
+| baseline_no_gate      | 2026-04 |     -724.16 |     138.2  |   -862.35 |           126.88 |           -851.04 |           1010 |            6420 |
+| long_only_diagnostic  | 2025-05 |      126.31 |      83.46 |     42.84 |           126.31 |              0    |           3094 |               0 |
+| long_only_diagnostic  | 2025-06 |      153.88 |      16.58 |    137.29 |           153.88 |              0    |            384 |               0 |
+| long_only_diagnostic  | 2025-07 |        0    |       0    |      0    |             0    |              0    |              0 |               0 |
+| long_only_diagnostic  | 2025-08 |       46.38 |      83.26 |    -36.87 |            46.38 |              0    |           3386 |               0 |
+| long_only_diagnostic  | 2025-09 |      281.73 |      56.09 |    225.64 |           281.73 |              0    |           1922 |               0 |
+| long_only_diagnostic  | 2025-10 |       61.69 |       2.47 |     59.22 |            61.69 |              0    |            317 |               0 |
+| long_only_diagnostic  | 2025-11 |      -90.13 |     199.04 |   -289.17 |           -90.13 |              0    |           3062 |               0 |
+| long_only_diagnostic  | 2025-12 |     -567.94 |     170.01 |   -737.95 |          -567.94 |              0    |           4643 |               0 |
+| long_only_diagnostic  | 2026-01 |     -171.26 |      30.37 |   -201.64 |          -171.26 |              0    |            627 |               0 |
+| long_only_diagnostic  | 2026-02 |      -29.75 |     106.54 |   -136.3  |           -29.75 |              0    |           3852 |               0 |
+| long_only_diagnostic  | 2026-03 |      101.57 |     142    |    -40.43 |           101.57 |              0    |           4216 |               0 |
+| long_only_diagnostic  | 2026-04 |      126.88 |      24.26 |    102.62 |           126.88 |              0    |           1010 |               0 |
+| short_only_diagnostic | 2025-05 |     -580.41 |     131.57 |   -711.98 |             0    |           -580.41 |              0 |            3408 |
+| short_only_diagnostic | 2025-06 |     -127.38 |     220.67 |   -348.05 |             0    |           -127.38 |              0 |            6935 |
+| short_only_diagnostic | 2025-07 |       37.46 |     246.5  |   -209.04 |             0    |             37.46 |              0 |            7741 |
+| short_only_diagnostic | 2025-08 |       53.72 |      85.41 |    -31.69 |             0    |             53.72 |              0 |            2428 |
+| short_only_diagnostic | 2025-09 |      -86.31 |     105.19 |   -191.5  |             0    |            -86.31 |              0 |            4603 |
+| short_only_diagnostic | 2025-10 |      395.13 |     271.51 |    123.62 |             0    |            395.13 |              0 |            7978 |
 
-Interpretation: premium-persistence gates can reduce the April short-side blow-up, but the Jan-Feb-selected gate still does not produce positive Mar-Apr net after a 2x cost buffer. Side-only diagnostics show the regime flip directly: short-only works in Jan-Feb but fails badly in April, while long-only helps April but fails in train. This supports a no-trade policy until a regime classifier is validated on a later holdout.
+Interpretation: premium-persistence gates can reduce the April short-side blow-up, but the train/validation-selected gate still does not produce positive test net after a 2x cost buffer. Side-only diagnostics show the regime flip directly: short exposure helps in some earlier months but fails badly in April, while long-only helps April but fails in train. This supports a no-trade policy until a regime classifier is validated on a later holdout.
 
 ## 8. Supervised regime classifier
 
 Selection table:
 
-| decision        | selected_strategy                 | train_scheme   | model_name   |   horizon_min |   confidence |   validation_net_bps |   mar_net_bps |   apr_net_bps |   test_net_bps |   test_2x_cost_net_bps |   latency1_test_net_bps |
-|:----------------|:----------------------------------|:---------------|:-------------|--------------:|-------------:|---------------------:|--------------:|--------------:|---------------:|-----------------------:|------------------------:|
-| diagnostic_only | jan_only_rf_depth3_h30_edge5_p0.4 | jan_only       | rf_depth3    |            30 |          0.4 |               114.63 |       -829.84 |       -152.67 |        -982.51 |                -1790.1 |                 -855.03 |
+| decision        | selected_strategy                  | train_scheme   | model_name   |   horizon_min |   confidence |   validation_net_bps |   mar_net_bps |   apr_net_bps |   test_net_bps |   test_2x_cost_net_bps |   latency1_test_net_bps |
+|:----------------|:-----------------------------------|:---------------|:-------------|--------------:|-------------:|---------------------:|--------------:|--------------:|---------------:|-----------------------:|------------------------:|
+| diagnostic_only | train_all_rf_depth4_h60_edge5_p0.4 | train_all      | rf_depth4    |            60 |          0.4 |               104.32 |        -18.53 |       -253.14 |        -271.67 |                -931.31 |                 -162.03 |
 
 Controls:
 
 | control                        |   validation_net_bps |   test_net_bps |   test_trades |
 |:-------------------------------|---------------------:|---------------:|--------------:|
-| selected_classifier            |               114.63 |        -982.51 |           450 |
-| sign_flip                      |              -391.93 |        -632.62 |           450 |
-| classifier_active_always_long  |              -380.26 |        -461.45 |           450 |
-| classifier_active_always_short |               102.95 |       -1153.69 |           450 |
+| selected_classifier            |               104.32 |        -271.67 |           480 |
+| sign_flip                      |              -375.31 |       -1047.55 |           480 |
+| classifier_active_always_long  |               -39.63 |        -574.76 |           480 |
+| classifier_active_always_short |              -231.37 |        -744.46 |           480 |
 
-Interpretation: the classifier is allowed to choose mean-reversion, trend-continuation, or no-trade, but it still fails the Mar-Apr holdout. The selected classifier is validation-positive, yet test net is negative and cost/latency stress is worse. Therefore the regime idea remains a research direction, not a tradable rule.
+Interpretation: the classifier is allowed to choose mean-reversion, trend-continuation, or no-trade, but it still fails the metadata test holdout. The selected classifier is validation-positive, yet test net is negative and cost/latency stress is worse. Therefore the regime idea remains a research direction, not a tradable rule.
 
 ## Recommended next implementation
 

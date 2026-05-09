@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the current new-data research report."""
+"""Generate the current final-data research report."""
 
 from __future__ import annotations
 
@@ -105,11 +105,11 @@ def markdown_report() -> Path:
     regime_classifier_controls = read_optional("regime_classifier_controls.csv")
     regime_classifier_monthly = read_optional("regime_classifier_monthly.csv")
 
-    text = f"""# XLK Microstructure Statistical Arbitrage: New-Data Progress Report
+    text = f"""# XLK Microstructure Statistical Arbitrage: Final-Data Progress Report
 
 ## Dataset
 
-- Raw data: `{meta.get('raw_dir', 'data/newdata')}`
+- Raw data: `{meta.get('raw_dir', 'data/finaldata')}`
 - Sample: `{meta.get('start')}` to `{meta.get('end')}`
 - Universe: `{meta.get('etf', 'XLK')}` + {len(meta.get('constituents', []))} constituents
 - Requested-but-dropped symbols after quote/trade cleaning: `{', '.join(meta.get('dropped_requested_symbols', [])) or 'none'}`
@@ -225,11 +225,11 @@ Largest ridge coefficients:
 
 ## Current Timing Robustness Re-Audit
 
-The previously highlighted `micro_shrink_0.75_cw10d_e60_x0_mh240` result was March-only and came from an older sparse basket convention.  The script now regenerates timing robustness on the current expanded clean top-5 holdings basket and evaluates the full March-April holdout.
+The previously highlighted `micro_shrink_0.75_cw10d_e60_x0_mh240` result came from an older sparse basket convention.  The script now regenerates timing robustness on the current final-data clean top-5 holdings basket and evaluates the metadata test holdout.
 
-Current Jan-Feb-selected decision:
+Current train/validation-selected decision:
 
-{md_table(timing_robust_decision, ['decision', 'reason', 'selected_strategy', 'train_net_bps', 'mar_net_bps', 'apr_net_bps', 'test_net_bps', 'exact_bidask_test_net_bps', 'latency1_test_net_bps'], 5)}
+{md_table(timing_robust_decision, ['decision', 'reason', 'selected_strategy', 'train_net_bps', 'validation_net_bps', 'test_net_bps', 'exact_bidask_test_net_bps', 'latency1_test_net_bps'], 5)}
 
 Named candidate audit:
 
@@ -243,9 +243,9 @@ Named candidate execution audit:
 
 The regime-shift check asks whether poor timing performance comes from a broken XLK/basket linkage, wider execution costs, or a directional signal failure.  The expanded-sample evidence points mainly to signal-direction instability: XLK/basket correlation and beta do not collapse, but April is a strong XLK rally in which the positive premium stays persistent and the contrarian rule remains short XLK for too long.
 
-Train-vs-test regime summary:
+Train/validation/test regime summary:
 
-{md_table(regime_summary, ['metric', 'train_avg', 'test_avg', 'test_minus_train'], 20)}
+{md_table(regime_summary, ['metric', 'train_avg', 'validation_avg', 'test_avg', 'test_minus_train'], 20)}
 
 Monthly market state:
 
@@ -257,11 +257,11 @@ Named timing candidate monthly PnL anatomy:
 
 ## Regime-Gate Repair Experiments
 
-The April diagnosis suggests a specific repair: prevent the contrarian rule from shorting XLK when the premium is persistent and/or both XLK and the sparse basket are trending upward.  The gate experiment keeps the target signal fixed and only changes the trade/no-trade overlay.  Gate selection uses January-February only; March-April remains holdout.
+The April diagnosis suggests a specific repair: prevent the contrarian rule from shorting XLK when the premium is persistent and/or both XLK and the sparse basket are trending upward.  The gate experiment keeps the target signal fixed and only changes the trade/no-trade overlay.  Gate selection uses metadata train/validation only; the metadata test window remains holdout.
 
 Selection:
 
-{md_table(regime_gate_selection, ['decision', 'selected_strategy', 'gate_mode', 'state_kind', 'lookback_min', 'trend_threshold_bps', 'train_net_bps', 'mar_net_bps', 'apr_net_bps', 'test_net_bps', 'test_2x_cost_net_bps'], 5)}
+{md_table(regime_gate_selection, ['decision', 'selected_strategy', 'gate_mode', 'state_kind', 'lookback_min', 'trend_threshold_bps', 'train_net_bps', 'validation_net_bps', 'test_net_bps', 'test_2x_cost_net_bps'], 5)}
 
 Monthly side anatomy:
 
@@ -269,7 +269,7 @@ Monthly side anatomy:
 
 ## Regime Classifier
 
-The classifier version replaces fixed gates with a three-state supervised model: mean-reversion, trend-continuation, or no-trade.  January trains the classifier, February selects model/confidence settings, and March-April is the holdout.  Selection also requires the classifier to beat active always-long/always-short controls on validation, preventing a disguised directional rule from passing as regime intelligence.
+The classifier version replaces fixed gates with a three-state supervised model: mean-reversion, trend-continuation, or no-trade.  The metadata train split fits the classifier, validation selects model/confidence settings, and test is the holdout.  Selection also requires the classifier to beat active always-long/always-short controls on validation, preventing a disguised directional rule from passing as regime intelligence.
 
 Selection:
 
@@ -319,7 +319,7 @@ Bid/ask boundary audit:
 
 The next report should avoid saying "ETF arbitrage is profitable" unless a market-neutral rule survives the new spread-construction and execution-cost checks.  The defensible framing is:
 
-> Market-neutral XLK-vs-basket arbitrage is fragile under realistic TAQ execution assumptions.  The more promising direction is to use the sparse/top-holdings basket as a fair-value signal and trade XLK only, but the first new-data quick run does not yet prove a stable positive active strategy.  Report gross/no-cost, 0.25-spread, 0.50-spread, and last-trade proxy economics separately.
+> Market-neutral XLK-vs-basket arbitrage is fragile under realistic TAQ execution assumptions.  The sparse/top-holdings basket contains fair-value information, but the final-data run does not yet prove a stable positive active strategy.  Report gross/no-cost, 0.25-spread, 0.50-spread, and last-trade proxy economics separately.
 
 ## Next Steps
 
@@ -370,7 +370,7 @@ def pdf_report() -> Path:
     out = OUTPUT / "research_report.pdf"
     doc = SimpleDocTemplate(out.as_posix(), pagesize=letter, rightMargin=0.5 * inch, leftMargin=0.5 * inch)
     story = [
-        Paragraph("XLK Microstructure Statistical Arbitrage: New-Data Progress Report", styles["Title"]),
+        Paragraph("XLK Microstructure Statistical Arbitrage: Final-Data Progress Report", styles["Title"]),
         Paragraph(
             "Market-neutral XLK-vs-basket arbitrage is audited separately from XLK-only sparse-basket fair-value timing.  The report emphasizes spread construction, gross/no-cost economics, transaction-cost scenarios, and last-trade execution proxies.",
             styles["BodyText"],

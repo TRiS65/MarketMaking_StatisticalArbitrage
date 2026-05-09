@@ -158,7 +158,7 @@ def profit_search_diagnosis(df: pd.DataFrame, min_cost_buffer: float) -> pd.Data
         out.loc[posterior, "candidate_train_gate"] = False
         out["posterior_protocol_flag"] = posterior
     out["legacy_output_warning"] = (
-        "profit_search table predates the expanded top-20 pipeline; treat as candidate shape, not final new-data evidence"
+        "profit_search table predates the expanded top-20 pipeline; treat as candidate shape, not final finaldata evidence"
     )
     return out.sort_values(["candidate_train_gate", "test_net_bps"], ascending=[False, False])
 
@@ -309,7 +309,7 @@ def main() -> None:
         decisions.append({
             "research_path": "named_timing_candidate_micro075_e60",
             "decision": "no_trade" if float(r.get("test_net_bps", np.nan)) <= 0 else "target_candidate_pending_controls",
-            "reason": "named candidate audited on current top-5 basket with Mar-Apr test",
+            "reason": "named candidate audited on current top-5 basket with metadata test",
             "train_or_validation_net_bps": r.get("train_net_bps", np.nan),
             "test_net_bps": r.get("test_net_bps", np.nan),
             "raw_test_net_bps_before_gate": r.get("test_net_bps", np.nan),
@@ -386,27 +386,27 @@ def main() -> None:
     lines.append("\nInterpretation: a non-monotone or sign-flipping decile curve means the signal should not be traded as a symmetric z-score. Prefer fixed-bps thresholds, asymmetric tails, or a no-trade gate.\n")
 
     lines.append("## 6. Current timing robustness / named candidate audit\n")
-    lines.append("Current Jan-Feb-selected timing decision:\n")
-    lines.append(table_md(timing_robust, ["decision", "reason", "selected_strategy", "train_net_bps", "mar_net_bps", "apr_net_bps", "test_net_bps", "exact_bidask_test_net_bps", "latency1_test_net_bps"], n=5, digits=2))
+    lines.append("Current train/validation-selected timing decision:\n")
+    lines.append(table_md(timing_robust, ["decision", "reason", "selected_strategy", "train_net_bps", "validation_net_bps", "test_net_bps", "exact_bidask_test_net_bps", "latency1_test_net_bps"], n=5, digits=2))
     lines.append("\nNamed candidate `micro_shrink_0.75_cw10d_e60_x0_mh240` on the current top-5 basket:\n")
     lines.append(table_md(timing_target, ["strategy", "basket_symbols", "train_net_bps", "mar_net_bps", "apr_net_bps", "test_net_bps", "train_trades", "test_trades"], n=5, digits=2))
     lines.append("\nNamed candidate execution audit:\n")
     lines.append(table_md(timing_target_exec, ["execution_model", "latency_min", "train_net_bps", "mar_net_bps", "apr_net_bps", "test_net_bps", "test_trades"], n=10, digits=2))
-    lines.append("\nInterpretation: this resolves the earlier contradiction. The old March-only positive timing result does not survive regeneration on the current expanded top-5 basket plus Mar-Apr holdout.\n")
+    lines.append("\nInterpretation: this resolves the earlier contradiction. The old positive timing result does not survive regeneration on the current final-data top-5 basket plus metadata test holdout.\n")
 
     lines.append("## 7. Regime-gate repair experiment\n")
     lines.append("Selection table:\n")
-    lines.append(table_md(regime_gate, ["decision", "selected_strategy", "gate_mode", "state_kind", "lookback_min", "trend_threshold_bps", "train_net_bps", "mar_net_bps", "apr_net_bps", "test_net_bps", "test_2x_cost_net_bps"], n=5, digits=2))
+    lines.append(table_md(regime_gate, ["decision", "selected_strategy", "gate_mode", "state_kind", "lookback_min", "trend_threshold_bps", "train_net_bps", "validation_net_bps", "test_net_bps", "test_2x_cost_net_bps"], n=5, digits=2))
     lines.append("\nMonthly side anatomy for baseline, side-only diagnostics, and selected/best gates:\n")
     lines.append(table_md(regime_gate_monthly, ["strategy", "month", "gross_bps", "cost_bps", "net_bps", "long_gross_bps", "short_gross_bps", "long_minutes", "short_minutes"], n=30, digits=2))
-    lines.append("\nInterpretation: premium-persistence gates can reduce the April short-side blow-up, but the Jan-Feb-selected gate still does not produce positive Mar-Apr net after a 2x cost buffer. Side-only diagnostics show the regime flip directly: short-only works in Jan-Feb but fails badly in April, while long-only helps April but fails in train. This supports a no-trade policy until a regime classifier is validated on a later holdout.\n")
+    lines.append("\nInterpretation: premium-persistence gates can reduce the April short-side blow-up, but the train/validation-selected gate still does not produce positive test net after a 2x cost buffer. Side-only diagnostics show the regime flip directly: short exposure helps in some earlier months but fails badly in April, while long-only helps April but fails in train. This supports a no-trade policy until a regime classifier is validated on a later holdout.\n")
 
     lines.append("## 8. Supervised regime classifier\n")
     lines.append("Selection table:\n")
     lines.append(table_md(regime_classifier, ["decision", "selected_strategy", "train_scheme", "model_name", "horizon_min", "confidence", "validation_net_bps", "mar_net_bps", "apr_net_bps", "test_net_bps", "test_2x_cost_net_bps", "latency1_test_net_bps"], n=5, digits=2))
     lines.append("\nControls:\n")
     lines.append(table_md(regime_classifier_controls, ["control", "validation_net_bps", "test_net_bps", "test_trades"], n=10, digits=2))
-    lines.append("\nInterpretation: the classifier is allowed to choose mean-reversion, trend-continuation, or no-trade, but it still fails the Mar-Apr holdout. The selected classifier is validation-positive, yet test net is negative and cost/latency stress is worse. Therefore the regime idea remains a research direction, not a tradable rule.\n")
+    lines.append("\nInterpretation: the classifier is allowed to choose mean-reversion, trend-continuation, or no-trade, but it still fails the metadata test holdout. The selected classifier is validation-positive, yet test net is negative and cost/latency stress is worse. Therefore the regime idea remains a research direction, not a tradable rule.\n")
 
     lines.append("## Recommended next implementation\n")
     lines.append("1. Keep market-neutral pair/basket trading behind a hard no-trade gate. Do not report it as profitable unless gate_pass_pairs > 0 and the gated test result is positive.\n")

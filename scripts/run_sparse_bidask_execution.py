@@ -6,7 +6,8 @@ This keeps the selected position path and midpoint residual gross P&L from
 approximation with exact bid/ask boundary costs at every residual position
 change.
 
-It can run on the existing old Jan-Mar quote parquet files.
+It runs on the current finaldata quote parquet when available, with legacy
+minute quote files only as a fallback.
 """
 from __future__ import annotations
 

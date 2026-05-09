@@ -1,2 +1,2 @@
 decision,selected_strategy,reason,train_net_bps,test_net_bps,benchmark_no_trade_train_bps,benchmark_no_trade_test_bps,economic_label
-active_rule,xlk_only_timing_mid_ridge_pos_k3_zscore_mean_e3_x0.5_h0_contra_nogate_cw1950_mh180,passed train-only robustness filters,472.5459568673186,-17.72538874632618,0.0,0.0,XLK-only timing
+active_rule,xlk_only_timing_micro_conf_0.5_ridge_pos_k3_zscore_mean_e3_x0.5_h0_contra_nogate_cw1950_mh180,passed train-only robustness filters,335.68769639741913,-202.2137199882398,0.0,0.0,XLK-only timing

@@ -9,7 +9,7 @@ research-grade specification motivated by the papers in the project folder:
 * OU-style stationarity diagnostics,
 * microprice signals with midpoint-executable P&L,
 * proportional-cost no-trade gates and turnover accounting,
-* a strict Jan-Feb train / March test split.
+* a strict pre-test selection / metadata test split.
 """
 
 from __future__ import annotations
@@ -338,7 +338,7 @@ def optimize_and_test(
     plt.figure(figsize=(10, 4.8))
     for strategy, frame in [("selected sparse", selected_frame)]:
         plt.plot(frame.index, frame["cum_net_bps"], label=strategy)
-    plt.axvline(TRAIN_END, color="black", linestyle="--", linewidth=1, label="March test start")
+    plt.axvline(TRAIN_END, color="black", linestyle="--", linewidth=1, label="test start")
     plt.axhline(0, color="black", linewidth=0.8)
     plt.title("Enhanced Sparse Hedge Strategy: Cumulative Net P&L")
     plt.ylabel("basis points of ETF notional")

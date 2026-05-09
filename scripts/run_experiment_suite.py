@@ -7,8 +7,8 @@ IMC-style research workflow:
 1. Generate many economically motivated candidates: sparse baskets, hedge
    estimators, microprice-shrinkage signal views, fixed-bps and z-score bands,
    partial hedging, cost gates, and time-of-day filters.
-2. Select only on the training period.  The default is Jan-Feb 2026 training and
-   March 2026 out-of-sample testing.
+2. Select only on the configured training period and report the configured
+   out-of-sample test.
 3. Prefer stable parameter regions over single backtest peaks.
 4. Compare every active rule against a no-trade benchmark.  If no active rule has
    robust positive training performance, the selected decision is explicitly

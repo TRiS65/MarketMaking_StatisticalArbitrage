@@ -1,9 +1,9 @@
 research_path,decision,reason,train_or_validation_net_bps,test_net_bps,raw_test_net_bps_before_gate
-market_neutral_pair_or_basket,no_trade,validation-selected active pair/basket rules fail no-trade gate or lose after costs,,0.0,-53500.59482714178
-robust_alpha_suite_selected,no_trade,selected robust-alpha rule loses OOS or does not beat no-trade,472.5459568673186,-17.72538874632618,-17.72538874632618
+market_neutral_pair_or_basket,no_trade,validation-selected active pair/basket rules fail no-trade gate or lose after costs,,0.0,-51353.29740418585
+robust_alpha_suite_selected,no_trade,selected robust-alpha rule loses OOS or does not beat no-trade,335.68769639741913,-202.2137199882398,-202.2137199882398
 fixed_bps_xlk_only_timing_candidate,legacy_candidate_shape_only,"legacy profit-search output is Jan-Feb positive, but it predates expanded top-20 controls and is not final evidence",456.47909374165073,613.3530614958253,613.3530614958253
-expanded_fixed_bps_xlk_only_timing,no_trade,train_or_validation_net<=0;test_net<=0;2x_cost_test<=0;latency1_test<=0;does_not_beat_directional_control;sign_flip_not_worse;circular_pvalue>0.10,-2115.4579442410177,-977.2390831260766,-977.2390831260766
-timing_robustness_current_selection,no_trade,No XLK-only timing rule passed Jan-Feb train filters.,0.0,0.0,0.0
-named_timing_candidate_micro075_e60,no_trade,named candidate audited on current top-5 basket with Mar-Apr test,-142.15963336817242,-894.7909209969378,-894.7909209969378
-regime_gated_timing_repair,no_trade,Selected on Jan-Feb only; Mar-Apr is holdout audit. Script label: diagnostic_only.,373.6135052696478,-131.35771604813883,-131.35771604813883
-regime_classifier_timing,no_trade,selected on February validation only; Mar-Apr is holdout. Script label: diagnostic_only.,114.62798638059564,-982.5101353508546,-982.5101353508546
+expanded_fixed_bps_xlk_only_timing,no_trade,train_or_validation_net<=0;test_net<=0;2x_cost_test<=0;latency1_test<=0;does_not_beat_directional_control;sign_flip_not_worse;circular_pvalue>0.10,-2572.037897886701,-977.2390831260766,-977.2390831260766
+timing_robustness_current_selection,no_trade,No XLK-only timing rule passed train/validation filters.,0.0,0.0,0.0
+named_timing_candidate_micro075_e60,no_trade,named candidate audited on current top-5 basket with metadata test,-2695.474958468012,-894.7909209969378,-894.7909209969378
+regime_gated_timing_repair,no_trade,Selected on train/validation only; test is holdout audit. Script label: diagnostic_only.,79.63307239512228,-131.35771604813883,-131.35771604813883
+regime_classifier_timing,no_trade,selected on metadata validation only; test is holdout. Script label: diagnostic_only.,104.31768035007428,-271.6724257877619,-271.6724257877619

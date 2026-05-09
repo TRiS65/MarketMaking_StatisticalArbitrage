@@ -4,3 +4,6 @@ __pycache__/
 .pytest_cache/
 output/duckdb_tmp/
 data/raw/
+data/newdata/
+data/finaldata/
+*.csv.gz

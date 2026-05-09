@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reusable execution helpers for old XLK minute quote parquet data.
+"""Reusable execution helpers for XLK minute quote parquet data.
 
 These helpers use a consistent convention:
 
@@ -27,8 +27,11 @@ MINUTES_PER_DAY = 390
 
 def load_old_quotes(processed: Path, symbols: Iterable[str] | None = None) -> dict[str, pd.DataFrame]:
     quote_parts = []
+    final_path = processed / "minute_quotes_finaldata.parquet"
     new_path = processed / "minute_quotes_new.parquet"
-    if new_path.exists():
+    if final_path.exists():
+        quote_parts.append(pd.read_parquet(final_path))
+    elif new_path.exists():
         quote_parts.append(pd.read_parquet(new_path))
     else:
         for month in ["01", "02", "03"]:

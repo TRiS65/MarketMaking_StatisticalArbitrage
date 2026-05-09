@@ -5,9 +5,10 @@ This module audits the separate active timing claim:
 
     sparse/top-holdings basket microprice premium -> trade XLK only
 
-It is not market-neutral arbitrage.  Selection uses Jan-Feb stability only; the
-out-of-sample audit is March + April.  The selected rule then receives exact
-XLK bid/ask boundary, latency, cost-stress, and directional controls.
+It is not market-neutral arbitrage.  Selection uses the metadata train and
+validation windows only.  The selected rule then receives exact XLK bid/ask
+boundary, latency, cost-stress, and directional controls on the metadata test
+holdout.
 """
 
 from __future__ import annotations
@@ -201,20 +202,50 @@ def period_stats(frame: pd.DataFrame, start: str | pd.Timestamp, end: str | pd.T
     }
 
 
-def summarize(frame: pd.DataFrame) -> dict:
+def month_prefix(ts: pd.Timestamp) -> str:
+    return ts.strftime("m%Y_%m")
+
+
+def split_bounds() -> tuple[pd.Timestamp, pd.Timestamp, pd.Timestamp, pd.Timestamp]:
     meta = metadata()
+    return (
+        pd.Timestamp(meta.get("start", "2025-05-01")),
+        pd.Timestamp(meta.get("train_end", "2026-02-01")),
+        pd.Timestamp(meta.get("validation_end", "2026-03-01")),
+        pd.Timestamp(meta.get("test_end", meta.get("end", "2026-05-01"))),
+    )
+
+
+def summarize(frame: pd.DataFrame) -> dict:
+    start, train_end, validation_end, test_end = split_bounds()
     out = {}
-    out.update(period_stats(frame, "2025-11-01", "2025-12-01", "nov"))
-    out.update(period_stats(frame, "2025-12-01", "2026-01-01", "dec"))
-    out.update(period_stats(frame, "2026-01-01", "2026-02-01", "jan"))
-    out.update(period_stats(frame, "2026-02-01", "2026-03-01", "feb"))
-    out.update(period_stats(frame, "2026-03-01", "2026-04-01", "mar"))
-    out.update(period_stats(frame, "2026-04-01", "2026-05-01", "apr"))
-    out.update(period_stats(frame, "2026-03-01", meta.get("test_end", "2026-05-01"), "test"))
-    out["train_net_bps"] = out["jan_net_bps"] + out["feb_net_bps"]
-    out["train_trades"] = out["jan_trades"] + out["feb_trades"]
-    out["train_fold_positive_rate"] = float((out["jan_net_bps"] > 0) + (out["feb_net_bps"] > 0)) / 2.0
-    out["all_net_bps"] = out["train_net_bps"] + out["test_net_bps"]
+    for month_start in pd.date_range(start.normalize().replace(day=1), test_end, freq="MS"):
+        month_end = month_start + pd.offsets.MonthBegin(1)
+        out.update(period_stats(frame, month_start, month_end, month_prefix(month_start)))
+    legacy_aliases = {
+        "nov": "2025-11",
+        "dec": "2025-12",
+        "jan": "2026-01",
+        "feb": "2026-02",
+        "mar": "2026-03",
+        "apr": "2026-04",
+    }
+    for alias, ym in legacy_aliases.items():
+        src = "m" + ym.replace("-", "_")
+        for suffix in ["gross_bps", "cost_bps", "net_bps", "trades", "avg_abs_position"]:
+            out[f"{alias}_{suffix}"] = out.get(f"{src}_{suffix}", 0.0)
+    out.update(period_stats(frame, start, train_end, "train"))
+    out.update(period_stats(frame, train_end, validation_end, "validation"))
+    out.update(period_stats(frame, validation_end, test_end, "test"))
+    train_month_keys = [
+        f"{month_prefix(m)}_net_bps"
+        for m in pd.date_range(start.normalize().replace(day=1), train_end - pd.Timedelta(days=1), freq="MS")
+        if f"{month_prefix(m)}_net_bps" in out
+    ]
+    train_month_nets = [out[k] for k in train_month_keys]
+    out["train_fold_positive_rate"] = float(np.mean(np.asarray(train_month_nets) > 0)) if train_month_nets else 0.0
+    out["train_worst_month_bps"] = float(np.min(train_month_nets)) if train_month_nets else 0.0
+    out["all_net_bps"] = out["train_net_bps"] + out["validation_net_bps"] + out["test_net_bps"]
     return out
 
 
@@ -241,9 +272,10 @@ def backtest_rule(
     out.update(summarize(frame))
     out["train_selection_score"] = (
         out["train_net_bps"]
-        + 0.75 * min(out["jan_net_bps"], out["feb_net_bps"])
+        + 0.75 * out["train_worst_month_bps"]
+        + 0.50 * out["validation_net_bps"]
         + 25.0 * out["train_fold_positive_rate"]
-        - 0.10 * (out["jan_cost_bps"] + out["feb_cost_bps"])
+        - 0.10 * (out["train_cost_bps"] + out["validation_cost_bps"])
     )
     return frame, out
 
@@ -295,7 +327,12 @@ def main() -> None:
         _, row = backtest_rule(rule, mid, micro, spread_bps, weights)
         rows.append(row)
     grid = pd.DataFrame(rows)
-    train_valid = (grid["train_trades"].between(20, 160)) & (grid["train_net_bps"] > 0) & (grid["train_fold_positive_rate"] >= 1.0)
+    train_valid = (
+        (grid["train_trades"].between(30, 900))
+        & (grid["train_net_bps"] > 0)
+        & (grid["validation_net_bps"] > 0)
+        & (grid["train_fold_positive_rate"] >= 0.55)
+    )
     stable = (
         grid.assign(train_valid=train_valid)
         .groupby(["signal_view", "center_days", "entry_bps"])
@@ -304,6 +341,7 @@ def main() -> None:
             valid_rules=("train_valid", "sum"),
             median_train_net_bps=("train_net_bps", "median"),
             p25_train_net_bps=("train_net_bps", lambda s: float(np.percentile(s, 25))),
+            median_validation_net_bps=("validation_net_bps", "median"),
             median_test_net_bps=("test_net_bps", "median"),
             positive_test_rate=("test_net_bps", lambda s: float((s > 0).mean())),
         )
@@ -328,7 +366,7 @@ def main() -> None:
     if selected.empty:
         if selected_backtest_path.exists():
             selected_backtest_path.unlink()
-        decision = pd.DataFrame([{"decision": "no_trade", "reason": "No XLK-only timing rule passed Jan-Feb train filters.", "train_net_bps": 0.0, "test_net_bps": 0.0}])
+        decision = pd.DataFrame([{"decision": "no_trade", "reason": "No XLK-only timing rule passed train/validation filters.", "train_net_bps": 0.0, "validation_net_bps": 0.0, "test_net_bps": 0.0}])
         controls = pd.DataFrame()
         execution = pd.DataFrame()
         monthly = pd.DataFrame()
@@ -427,16 +465,16 @@ def main() -> None:
             [
                 {
                     "decision": decision_label,
-                    "reason": ";".join(reasons) if reasons else "passes Mar-Apr exact execution/control audit",
+                    "reason": ";".join(reasons) if reasons else "passes metadata test exact execution/control audit",
                     "selected_strategy": best["strategy"],
                     "basket_symbols": " ".join(weights.index),
                     "basket_weights": " ".join(f"{k}:{v:.4f}" for k, v in weights.items()),
                     "train_net_bps": best["train_net_bps"],
-                    "mar_net_bps": best["mar_net_bps"],
-                    "apr_net_bps": best["apr_net_bps"],
+                    "validation_net_bps": best["validation_net_bps"],
                     "test_net_bps": best["test_net_bps"],
                     "all_net_bps": best["all_net_bps"],
                     "train_trades": best["train_trades"],
+                    "validation_trades": best["validation_trades"],
                     "test_trades": best["test_trades"],
                     "exact_bidask_test_net_bps": exact0["test_net_bps"],
                     "latency1_test_net_bps": exact1["test_net_bps"],
@@ -492,7 +530,7 @@ def main() -> None:
 
     report = (
         "# Timing Robustness Audit\n\n"
-        "Selection uses Jan-Feb stability only. Test is March + April. The strategy trades only XLK; the basket is a fair-value signal.\n\n"
+        "Selection uses metadata train/validation only. Test is the metadata holdout. The strategy trades only XLK; the basket is a fair-value signal.\n\n"
         "## Decision\n\n"
         + decision.to_markdown(index=False)
         + "\n\n## Execution Audit\n\n"
