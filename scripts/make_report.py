@@ -76,6 +76,9 @@ def markdown_report() -> Path:
     monetization_selection = read_optional("monetization_selection.csv")
     monetization_weights = read_optional("monetization_selected_weights.csv")
     monetization_frontier = read_optional("monetization_markowitz_frontier.csv")
+    rescue_pair_gate = read_optional("rescue_pair_gate.csv")
+    rescue_pair_concentration = read_optional("rescue_pair_trade_concentration.csv")
+    rescue_no_short = read_optional("rescue_no_short_uptrend_summary.csv")
     robust_selection = read_optional("robust_alpha_selection.csv")
     robust_controls = read_optional("robust_alpha_controls.csv")
     robust_cost = read_optional("robust_alpha_cost_sensitivity.csv")
@@ -150,6 +153,24 @@ Final verdict by strategy family:
 | Regime gate / supervised classifier | Diagnostic only | Helps explain April failure but does not survive test, 2x cost, or latency stress |
 | Markowitz / Almgren-Chriss monetization optimizer | Rejected / no-trade | Finds validation-positive liquid signals but loses `-712.26` bps in the untouched test window |
 | Remaining research opportunity | Future work, not final claim | Only narrow gross-positive candidates should receive event-level execution audit; alternative ETF-ETF or lower-turnover designs are separate projects |
+
+## Narrow Rescue Audit
+
+The last profitability check is intentionally narrow.  It audits only gross-positive / low-cost professor-leaderboard pairs and a pre-defined no-short-into-uptrend timing family.  This is not another broad parameter search.
+
+Pair rescue gate:
+
+{md_table(rescue_pair_gate, ['pair', 'stock', 'spread_type', 'clipped_last_trade_proxy', 'exact_bidask_latency0', 'exact_bidask_latency1', 'exact_bidask_latency2', 'exact_bidask_latency5', 'passes_rescue_gate'], 10)}
+
+Trade concentration:
+
+{md_table(rescue_pair_concentration, ['pair', 'stock', 'spread_type', 'test_trade_segments', 'top5_abs_net_share', 'largest_trade_net_bps'], 10)}
+
+No-short-into-uptrend walk-forward audit:
+
+{md_table(rescue_no_short, ['selection_type', 'decision', 'reason', 'strategy', 'state_kind', 'lookback_min', 'trend_threshold_bps', 'train_net_bps', 'validation_net_bps', 'test_net_bps', 'test_2x_cost_net_bps'], 10)}
+
+Interpretation: `XLK-AAPL cum_residual_return` is the only minimal rescue candidate: exact bid/ask test P&L is `+26.12` bps at latency 0, `+1.47` bps at latency 1, `+17.95` bps at latency 2, and clipped last-trade proxy is `+182.43` bps.  It fails a harsher 5-minute latency stress at `-33.37` bps and has nontrivial concentration, so it is a future raw-event validation candidate, not final alpha.  The no-short-into-uptrend family has no train/validation-selected active rule.
 
 ## Top Holdings Used
 
@@ -411,6 +432,8 @@ def pdf_report() -> Path:
     regime_summary = read_optional("regime_shift_summary.csv")
     regime_gate_selection = read_optional("regime_gate_selection.csv")
     regime_classifier_selection = read_optional("regime_classifier_selection.csv")
+    rescue_pair_gate = read_optional("rescue_pair_gate.csv")
+    rescue_no_short = read_optional("rescue_no_short_uptrend_summary.csv")
 
     styles = getSampleStyleSheet()
     out = OUTPUT / "research_report.pdf"
@@ -434,6 +457,8 @@ def pdf_report() -> Path:
     table_story(story, "Empirical Symbol Costs", empirical_symbol_costs, ["symbol", "median_spread_bps", "p90_spread_bps", "median_halfspread_bps", "median_volume"], styles, 2, 20)
     table_story(story, "Latency Taker Costs", empirical_latency, ["symbol", "latency_min", "buy_taker_cost_bps_median", "sell_taker_cost_bps_median"], styles, 2, 20)
     table_story(story, "Execution-Optimized Pair Audit", execution_selection, ["stock", "spread_type", "policy", "val_net_bps", "test_net_bps", "oos_decision", "final_policy"], styles, 2, 5)
+    table_story(story, "Narrow Rescue Pair Gate", rescue_pair_gate, ["pair", "spread_type", "exact_bidask_latency0", "exact_bidask_latency1", "exact_bidask_latency5", "clipped_last_trade_proxy", "passes_rescue_gate"], styles, 2, 8)
+    table_story(story, "No-Short Rescue Audit", rescue_no_short, ["selection_type", "decision", "strategy", "train_net_bps", "validation_net_bps", "test_net_bps", "test_2x_cost_net_bps"], styles, 2, 8)
     table_story(story, "Loss Streamline Decision", loss_decision, ["research_path", "evidence_tier", "policy_role", "decision", "test_net_bps"], styles, 2, 5)
     table_story(story, "Finaldata Fixed-BPS Timing Controls", fixed_bps_selection, ["decision", "basket_symbols", "train_net_bps", "validation_net_bps", "test_net_bps", "circular_pvalue"], styles, 2, 5)
     table_story(story, "Microstructure Refinement Horizon Sweep", micro_refine, ["horizon_min", "decision", "train_net_bps", "validation_net_bps", "test_net_bps", "test_trades"], styles, 2, 8)

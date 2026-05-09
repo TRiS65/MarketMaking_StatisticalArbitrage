@@ -233,6 +233,8 @@ def main() -> None:
     monetization = safe_read(tables / "monetization_selection.csv")
     monetization_weights = safe_read(tables / "monetization_selected_weights.csv")
     monetization_frontier = safe_read(tables / "monetization_markowitz_frontier.csv")
+    rescue_pair_gate = safe_read(tables / "rescue_pair_gate.csv")
+    rescue_no_short = safe_read(tables / "rescue_no_short_uptrend_summary.csv")
 
     decisions = []
     # 1) Strict market-neutral / pair trading decision
@@ -354,6 +356,32 @@ def main() -> None:
             "raw_test_net_bps_before_gate": r.get("test_net_bps", np.nan),
         })
 
+    if not rescue_pair_gate.empty:
+        best = rescue_pair_gate.sort_values("exact_bidask_latency0", ascending=False).iloc[0]
+        is_minimal_candidate = bool(best.get("passes_rescue_gate", False))
+        decisions.append({
+            "research_path": "narrow_pair_rescue_audit",
+            "decision": "future_event_audit_candidate" if is_minimal_candidate else "no_trade",
+            "reason": (
+                "minimal pair rescue gate checks only whether a gross-positive pair deserves raw-event validation; "
+                "not policy-eligible final evidence"
+            ),
+            "train_or_validation_net_bps": np.nan,
+            "test_net_bps": best.get("exact_bidask_latency0", np.nan),
+            "raw_test_net_bps_before_gate": best.get("clipped_last_trade_proxy", np.nan),
+        })
+
+    if not rescue_no_short.empty:
+        r = rescue_no_short.iloc[0]
+        decisions.append({
+            "research_path": "no_short_uptrend_rescue_audit",
+            "decision": str(r.get("decision", "no_trade")),
+            "reason": str(r.get("reason", "no-short-into-uptrend walk-forward audit")),
+            "train_or_validation_net_bps": r.get("validation_net_bps", np.nan),
+            "test_net_bps": r.get("test_net_bps", np.nan),
+            "raw_test_net_bps_before_gate": r.get("test_net_bps", np.nan),
+        })
+
     decision_df = pd.DataFrame(decisions)
     if not decision_df.empty:
         final_12m = {
@@ -365,10 +393,15 @@ def main() -> None:
             "markowitz_ac_monetization",
         }
         diagnostic = {"regime_gated_timing_repair", "regime_classifier_timing"}
+        future = {"narrow_pair_rescue_audit"}
 
         def evidence_tier(path: str) -> str:
             if path == "fixed_bps_xlk_only_timing_candidate":
                 return "legacy_candidate_screen"
+            if path in future:
+                return "future_event_audit_candidate"
+            if path == "no_short_uptrend_rescue_audit":
+                return "diagnostic_only_overlay"
             if path in diagnostic:
                 return "diagnostic_only_overlay"
             if path in final_12m:
@@ -380,6 +413,8 @@ def main() -> None:
             decision = str(row.get("decision", ""))
             if tier == "legacy_candidate_screen":
                 return "not_policy_eligible"
+            if tier == "future_event_audit_candidate":
+                return "future_work_not_final_policy"
             if tier == "diagnostic_only_overlay":
                 return "diagnostic_not_tradeable"
             if decision in {"candidate_active", "active_candidate"}:

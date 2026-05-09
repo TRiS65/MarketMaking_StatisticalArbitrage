@@ -1,0 +1,5 @@
+pair,stock,spread_type,entry_z,exit_z,execution_scenario,test_trade_segments,top5_abs_net_share,largest_trade_net_bps
+XLK-AMD,AMD,direct_log_price,1.0,0.5,exact_bidask_latency0,41,0.4924049170642815,-470.4157782272967
+XLK-PLTR,PLTR,price_regression_residual,1.0,0.5,exact_bidask_latency0,34,0.4933386791929413,-751.531984851279
+XLK-AAPL,AAPL,cum_residual_return,2.0,0.0,exact_bidask_latency0,22,0.5872330597159567,-264.8197583914534
+XLK-INTC,INTC,direct_log_price,2.5,0.5,exact_bidask_latency0,6,0.9421873411851024,-218.72346808990434

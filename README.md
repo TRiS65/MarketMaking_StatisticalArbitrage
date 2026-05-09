@@ -117,6 +117,9 @@ The new diagnostics include OU/Avellaneda-Lee style mean-reversion scores. The n
 | `output/tables/monetization_selection.csv` | Markowitz/Almgren-Chriss monetization decision |
 | `output/tables/monetization_markowitz_frontier.csv` | Execution-stressed portfolio frontier across candidate sets |
 | `output/tables/monetization_selected_weights.csv` | Selected strategy weights from the monetization optimizer |
+| `output/tables/rescue_pair_gate.csv` | Narrow gross-positive pair rescue gate |
+| `output/tables/rescue_no_short_uptrend_summary.csv` | No-short-into-uptrend walk-forward audit summary |
+| `output/rescue_audit_report.md` | Narrow final rescue audit memo |
 | `output/tables/top20_trial_registry.csv` | Every top-20 pair-method trial and selection flag |
 | `output/tables/top20_method_comparison_summary.csv` | Method ablation after validation selection and no-trade gate |
 | `output/tables/top20_no_trade_gate.csv` | Why selected active pair rules are accepted or rejected |
@@ -191,12 +194,16 @@ The 12-month finaldata run gives a more conservative conclusion than the old sho
 | Supervised regime classifier | validation `+104.32` bps | test `-271.67` bps, 2x cost `-931.31` bps | Learns some validation states but fails holdout and costs; no active claim |
 | Markowitz / AC monetization optimizer | train `+743.62` bps, validation `+526.14` bps | test `-712.26` bps, last-trade proxy `-625.26` bps | Portfolio optimization finds validation signal but cannot monetize it out of sample |
 | Microstructure feature timing refinement | no horizon passes validation gate | best reported test `+0.39` bps with validation `-40.85` bps | Order-flow/spread/volatility features do not rescue timing as a linear rule |
+| Narrow rescue pair audit | XLK-AAPL passes latency-0/1/2 and last-trade proxy | latency-5 `-33.37` bps; top-5 trade share `58.7%` | Future event-level audit candidate only, not final alpha |
+| No-short-into-uptrend walk-forward audit | no rule passes train/validation filters | no selected test result | Trend blocking is diagnostic; not an active policy |
 
 The professor robustness table does find pair/spread definitions where no-cost and 0.25-spread results are strongly positive, while 0.50-spread taker costs often erase the edge. That is the main empirical evidence that execution quality is now the central research question.
 
 The monetization optimizer makes this sharper.  It takes the liquid validation-positive pair signals, allocates across them with a long-only Markowitz/QP-style portfolio, and adds Almgren-Chriss-inspired participation impact and timing-risk buffers.  The best train/validation-selected portfolio is strongly positive in-sample (`+743.62` train, `+526.14` validation), but loses `-712.26` bps in the untouched test window and `-625.26` bps under the clipped last-trade proxy.  That is direct evidence that the bottleneck is monetization: prediction exists in pockets, but the edge is too unstable and slow to convert into robust net P&L.
 
 The practical implication is to stop broad parameter fishing.  Any further profitability rescue should be deliberately narrow: audit only gross-positive, low-cost candidates such as the AMD/AAPL-style pair rows that remain positive under conservative cost screens; separate signal baskets from tradable hedge baskets; and test any long-only or no-short-into-uptrend timing rule through the same metadata split before treating it as evidence.  The current final policy remains no-trade.
+
+The narrow rescue audit confirms this discipline.  Among the gross-positive pair candidates, only `XLK-AAPL cum_residual_return` passes a minimal rescue gate: test `+26.12` bps under exact bid/ask latency-0, `+1.47` bps under latency-1, `+17.95` bps under latency-2, and `+182.43` bps under clipped last-trade proxy.  It fails a harsher five-minute latency stress at `-33.37` bps and has meaningful trade concentration, so it is a raw-event validation candidate rather than a final trading claim.  The no-short-into-uptrend family does not pass train/validation selection filters, so it remains diagnostic.
 
 So the final answer is not that the research direction is impossible, nor that the machine is too weak.  It is that the tested 12-month XLK strategy families do not provide honest tradable alpha under the implemented evidence standard.  The remaining possible routes are new research questions: event-level audit of a few gross-positive pairs, cost-aware tradable basket construction, ETF-ETF relative value, or lower-turnover horizons.
 

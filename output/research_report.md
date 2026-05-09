@@ -26,17 +26,19 @@ The final report separates four categories so old positive screens are not confu
 3. **Diagnostic-only overlays:** regime gates and classifiers that explain failure modes but are not tradeable final policies.
 4. **Actual selected trading policy:** `no_trade`, because no final 12-month active rule survives the holdout and execution gates.
 
-| research_path                       | evidence_tier           | policy_role              | decision                    | selected_trading_policy   |   train_or_validation_net_bps |   test_net_bps |
-|:------------------------------------|:------------------------|:-------------------------|:----------------------------|:--------------------------|------------------------------:|---------------:|
-| market_neutral_pair_or_basket       | final_12m_evidence      | selected_no_trade_policy | no_trade                    | no_trade                  |                      nan      |          0     |
-| robust_alpha_suite_selected         | final_12m_evidence      | selected_no_trade_policy | no_trade                    | no_trade                  |                      335.688  |       -202.214 |
-| fixed_bps_xlk_only_timing_candidate | legacy_candidate_screen | not_policy_eligible      | legacy_candidate_shape_only | not_selected_for_trading  |                      456.479  |        613.353 |
-| finaldata_fixed_bps_xlk_only_timing | final_12m_evidence      | selected_no_trade_policy | no_trade                    | no_trade                  |                    -2572.04   |       -977.239 |
-| timing_robustness_current_selection | final_12m_evidence      | selected_no_trade_policy | no_trade                    | no_trade                  |                        0      |          0     |
-| named_timing_candidate_micro075_e60 | final_12m_evidence      | selected_no_trade_policy | no_trade                    | no_trade                  |                    -2695.47   |       -894.791 |
-| regime_gated_timing_repair          | diagnostic_only_overlay | diagnostic_not_tradeable | no_trade                    | not_selected_for_trading  |                       79.6331 |       -131.358 |
-| regime_classifier_timing            | diagnostic_only_overlay | diagnostic_not_tradeable | no_trade                    | not_selected_for_trading  |                      104.318  |       -271.672 |
-| markowitz_ac_monetization           | final_12m_evidence      | selected_no_trade_policy | no_trade                    | no_trade                  |                      526.138  |       -712.261 |
+| research_path                       | evidence_tier                | policy_role                  | decision                     | selected_trading_policy   |   train_or_validation_net_bps |   test_net_bps |
+|:------------------------------------|:-----------------------------|:-----------------------------|:-----------------------------|:--------------------------|------------------------------:|---------------:|
+| market_neutral_pair_or_basket       | final_12m_evidence           | selected_no_trade_policy     | no_trade                     | no_trade                  |                      nan      |         0      |
+| robust_alpha_suite_selected         | final_12m_evidence           | selected_no_trade_policy     | no_trade                     | no_trade                  |                      335.688  |      -202.214  |
+| fixed_bps_xlk_only_timing_candidate | legacy_candidate_screen      | not_policy_eligible          | legacy_candidate_shape_only  | not_selected_for_trading  |                      456.479  |       613.353  |
+| finaldata_fixed_bps_xlk_only_timing | final_12m_evidence           | selected_no_trade_policy     | no_trade                     | no_trade                  |                    -2572.04   |      -977.239  |
+| timing_robustness_current_selection | final_12m_evidence           | selected_no_trade_policy     | no_trade                     | no_trade                  |                        0      |         0      |
+| named_timing_candidate_micro075_e60 | final_12m_evidence           | selected_no_trade_policy     | no_trade                     | no_trade                  |                    -2695.47   |      -894.791  |
+| regime_gated_timing_repair          | diagnostic_only_overlay      | diagnostic_not_tradeable     | no_trade                     | not_selected_for_trading  |                       79.6331 |      -131.358  |
+| regime_classifier_timing            | diagnostic_only_overlay      | diagnostic_not_tradeable     | no_trade                     | not_selected_for_trading  |                      104.318  |      -271.672  |
+| markowitz_ac_monetization           | final_12m_evidence           | selected_no_trade_policy     | no_trade                     | no_trade                  |                      526.138  |      -712.261  |
+| narrow_pair_rescue_audit            | future_event_audit_candidate | future_work_not_final_policy | future_event_audit_candidate | not_selected_for_trading  |                      nan      |        26.1241 |
+| no_short_uptrend_rescue_audit       | diagnostic_only_overlay      | diagnostic_not_tradeable     | no_trade                     | not_selected_for_trading  |                      nan      |       nan      |
 
 This is not primarily a laptop-compute failure.  A MacBook limits how far the project can go toward event-level queue simulation, partial-fill modeling, and multi-leg synchronized execution, but the current no-trade result is driven by strategy evidence: several finaldata candidates lose on gross P&L before costs in the holdout.  For example, the re-audited `micro_shrink_0.75_cw10d_e60_x0_mh240` timing rule has test gross `-567.59` bps, cost `327.20` bps, and net `-894.79` bps; April alone has gross `-724.16` bps and net `-862.35` bps.  More detailed execution cannot rescue a rule whose out-of-sample direction is wrong before costs.
 
@@ -50,6 +52,45 @@ Final verdict by strategy family:
 | Regime gate / supervised classifier | Diagnostic only | Helps explain April failure but does not survive test, 2x cost, or latency stress |
 | Markowitz / Almgren-Chriss monetization optimizer | Rejected / no-trade | Finds validation-positive liquid signals but loses `-712.26` bps in the untouched test window |
 | Remaining research opportunity | Future work, not final claim | Only narrow gross-positive candidates should receive event-level execution audit; alternative ETF-ETF or lower-turnover designs are separate projects |
+
+## Narrow Rescue Audit
+
+The last profitability check is intentionally narrow.  It audits only gross-positive / low-cost professor-leaderboard pairs and a pre-defined no-short-into-uptrend timing family.  This is not another broad parameter search.
+
+Pair rescue gate:
+
+| pair     | stock   | spread_type               |   clipped_last_trade_proxy |   exact_bidask_latency0 |   exact_bidask_latency1 |   exact_bidask_latency2 |   exact_bidask_latency5 | passes_rescue_gate   |
+|:---------|:--------|:--------------------------|---------------------------:|------------------------:|------------------------:|------------------------:|------------------------:|:---------------------|
+| XLK-AAPL | AAPL    | cum_residual_return       |                   182.428  |               26.1241   |                 1.47078 |                 17.9499 |                -33.3729 | True                 |
+| XLK-AMD  | AMD     | direct_log_price          |                   383.041  |               14.5303   |              -266.992   |               -281.238  |               -308.303  | False                |
+| XLK-INTC | INTC    | direct_log_price          |                    67.6262 |               -0.627441 |                17.8539  |                 10.5722 |                -10.6224 | False                |
+| XLK-PLTR | PLTR    | price_regression_residual |                   244.593  |               -2.24894  |              -143.842   |               -280.088  |               -365.548  | False                |
+
+Trade concentration:
+
+| pair     | stock   | spread_type               |   test_trade_segments |   top5_abs_net_share |   largest_trade_net_bps |
+|:---------|:--------|:--------------------------|----------------------:|---------------------:|------------------------:|
+| XLK-AMD  | AMD     | direct_log_price          |                    41 |             0.492405 |                -470.416 |
+| XLK-PLTR | PLTR    | price_regression_residual |                    34 |             0.493339 |                -751.532 |
+| XLK-AAPL | AAPL    | cum_residual_return       |                    22 |             0.587233 |                -264.82  |
+| XLK-INTC | INTC    | direct_log_price          |                     6 |             0.942187 |                -218.723 |
+
+No-short-into-uptrend walk-forward audit:
+
+| selection_type             | decision        | reason                                                                   | strategy                                         | state_kind      |   lookback_min |   trend_threshold_bps |   train_net_bps |   validation_net_bps |   test_net_bps |   test_2x_cost_net_bps |
+|:---------------------------|:----------------|:-------------------------------------------------------------------------|:-------------------------------------------------|:----------------|---------------:|----------------------:|----------------:|---------------------:|---------------:|-----------------------:|
+| walk_forward_selected      | no_trade        | No no-short-into-uptrend rule passed train/validation filters.           | nan                                              | nan             |            nan |                   nan |          nan    |             nan      |       nan      |                nan     |
+| test_oracle_not_selectable | diagnostic_only | best test row shown only to measure possible shape; not honest selection | short_uptrend_multi_day_trend_lb3900_thr200_flat | multi_day_trend |           3900 |                   200 |        -3268.65 |              24.5423 |       -37.7115 |               -277.449 |
+| predefined_reference       | diagnostic_only | predefined no-short stress row                                           | short_uptrend_multi_day_trend_lb780_thr0_flat    | multi_day_trend |            780 |                     0 |        -3797.6  |             -18.5898 |      -302.4    |               -642.944 |
+| predefined_reference       | diagnostic_only | predefined no-short stress row                                           | short_uptrend_multi_day_trend_lb780_thr50_flat   | multi_day_trend |            780 |                    50 |        -3834.25 |              16.7435 |      -534.291  |              -1018.5   |
+| predefined_reference       | diagnostic_only | predefined no-short stress row                                           | short_uptrend_multi_day_trend_lb390_thr50_flat   | multi_day_trend |            390 |                    50 |        -4401.37 |              51.2748 |      -940.532  |              -1463.16  |
+| predefined_reference       | diagnostic_only | predefined no-short stress row                                           | short_uptrend_intraday_trend_lb120_thr25_flat    | intraday_trend  |            120 |                    25 |        -5110.47 |            -174.956  |     -1403.33   |              -2261.63  |
+| predefined_reference       | diagnostic_only | predefined no-short stress row                                           | short_uptrend_multi_day_trend_lb390_thr0_flat    | multi_day_trend |            390 |                     0 |        -5136.82 |            -230.824  |      -956.93   |              -1598.53  |
+| predefined_reference       | diagnostic_only | predefined no-short stress row                                           | short_uptrend_intraday_trend_lb120_thr0_flat     | intraday_trend  |            120 |                     0 |        -6100.82 |             -22.1015 |     -1409.26   |              -2362.22  |
+| predefined_reference       | diagnostic_only | predefined no-short stress row                                           | short_uptrend_intraday_trend_lb60_thr25_flat     | intraday_trend  |             60 |                    25 |        -6132.1  |            -154.474  |     -1508.49   |              -2463.57  |
+| predefined_reference       | diagnostic_only | predefined no-short stress row                                           | short_uptrend_intraday_trend_lb60_thr0_flat      | intraday_trend  |             60 |                     0 |        -8997.7  |            -214.267  |     -1657.43   |              -2793.21  |
+
+Interpretation: `XLK-AAPL cum_residual_return` is the only minimal rescue candidate: exact bid/ask test P&L is `+26.12` bps at latency 0, `+1.47` bps at latency 1, `+17.95` bps at latency 2, and clipped last-trade proxy is `+182.43` bps.  It fails a harsher 5-minute latency stress at `-33.37` bps and has nontrivial concentration, so it is a future raw-event validation candidate, not final alpha.  The no-short-into-uptrend family has no train/validation-selected active rule.
 
 ## Top Holdings Used
 
@@ -366,17 +407,18 @@ The maker/taker execution backtest is intentionally treated as a candidate scree
 
 ## Loss Streamline Decision
 
-| research_path                       | evidence_tier           | policy_role              | decision                    | selected_trading_policy   |   train_or_validation_net_bps |   test_net_bps |
-|:------------------------------------|:------------------------|:-------------------------|:----------------------------|:--------------------------|------------------------------:|---------------:|
-| market_neutral_pair_or_basket       | final_12m_evidence      | selected_no_trade_policy | no_trade                    | no_trade                  |                      nan      |          0     |
-| robust_alpha_suite_selected         | final_12m_evidence      | selected_no_trade_policy | no_trade                    | no_trade                  |                      335.688  |       -202.214 |
-| fixed_bps_xlk_only_timing_candidate | legacy_candidate_screen | not_policy_eligible      | legacy_candidate_shape_only | not_selected_for_trading  |                      456.479  |        613.353 |
-| finaldata_fixed_bps_xlk_only_timing | final_12m_evidence      | selected_no_trade_policy | no_trade                    | no_trade                  |                    -2572.04   |       -977.239 |
-| timing_robustness_current_selection | final_12m_evidence      | selected_no_trade_policy | no_trade                    | no_trade                  |                        0      |          0     |
-| named_timing_candidate_micro075_e60 | final_12m_evidence      | selected_no_trade_policy | no_trade                    | no_trade                  |                    -2695.47   |       -894.791 |
-| regime_gated_timing_repair          | diagnostic_only_overlay | diagnostic_not_tradeable | no_trade                    | not_selected_for_trading  |                       79.6331 |       -131.358 |
-| regime_classifier_timing            | diagnostic_only_overlay | diagnostic_not_tradeable | no_trade                    | not_selected_for_trading  |                      104.318  |       -271.672 |
-| markowitz_ac_monetization           | final_12m_evidence      | selected_no_trade_policy | no_trade                    | no_trade                  |                      526.138  |       -712.261 |
+| research_path                       | evidence_tier                | policy_role                  | decision                     | selected_trading_policy   |   train_or_validation_net_bps |   test_net_bps |
+|:------------------------------------|:-----------------------------|:-----------------------------|:-----------------------------|:--------------------------|------------------------------:|---------------:|
+| market_neutral_pair_or_basket       | final_12m_evidence           | selected_no_trade_policy     | no_trade                     | no_trade                  |                      nan      |         0      |
+| robust_alpha_suite_selected         | final_12m_evidence           | selected_no_trade_policy     | no_trade                     | no_trade                  |                      335.688  |      -202.214  |
+| fixed_bps_xlk_only_timing_candidate | legacy_candidate_screen      | not_policy_eligible          | legacy_candidate_shape_only  | not_selected_for_trading  |                      456.479  |       613.353  |
+| finaldata_fixed_bps_xlk_only_timing | final_12m_evidence           | selected_no_trade_policy     | no_trade                     | no_trade                  |                    -2572.04   |      -977.239  |
+| timing_robustness_current_selection | final_12m_evidence           | selected_no_trade_policy     | no_trade                     | no_trade                  |                        0      |         0      |
+| named_timing_candidate_micro075_e60 | final_12m_evidence           | selected_no_trade_policy     | no_trade                     | no_trade                  |                    -2695.47   |      -894.791  |
+| regime_gated_timing_repair          | diagnostic_only_overlay      | diagnostic_not_tradeable     | no_trade                     | not_selected_for_trading  |                       79.6331 |      -131.358  |
+| regime_classifier_timing            | diagnostic_only_overlay      | diagnostic_not_tradeable     | no_trade                     | not_selected_for_trading  |                      104.318  |      -271.672  |
+| markowitz_ac_monetization           | final_12m_evidence           | selected_no_trade_policy     | no_trade                     | no_trade                  |                      526.138  |      -712.261  |
+| narrow_pair_rescue_audit            | future_event_audit_candidate | future_work_not_final_policy | future_event_audit_candidate | not_selected_for_trading  |                      nan      |        26.1241 |
 
 ## Fixed-BPS Timing Controls on Finaldata
 
