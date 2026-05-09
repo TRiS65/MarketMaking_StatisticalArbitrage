@@ -230,6 +230,9 @@ def main() -> None:
     regime_gate_monthly = safe_read(tables / "regime_gate_monthly.csv")
     regime_classifier = safe_read(tables / "regime_classifier_selection.csv")
     regime_classifier_controls = safe_read(tables / "regime_classifier_controls.csv")
+    monetization = safe_read(tables / "monetization_selection.csv")
+    monetization_weights = safe_read(tables / "monetization_selected_weights.csv")
+    monetization_frontier = safe_read(tables / "monetization_markowitz_frontier.csv")
 
     decisions = []
     # 1) Strict market-neutral / pair trading decision
@@ -339,6 +342,18 @@ def main() -> None:
             "raw_test_net_bps_before_gate": r.get("test_net_bps", np.nan),
         })
 
+    if not monetization.empty:
+        r = monetization.iloc[0]
+        decision = str(r.get("decision", "no_trade"))
+        decisions.append({
+            "research_path": "markowitz_ac_monetization",
+            "decision": "candidate_active" if decision == "active_candidate" else "no_trade",
+            "reason": str(r.get("reason", "Markowitz/AC monetization optimizer")).rstrip(".") + f". Script label: {decision}.",
+            "train_or_validation_net_bps": r.get("validation_net_bps", np.nan),
+            "test_net_bps": r.get("test_net_bps", np.nan),
+            "raw_test_net_bps_before_gate": r.get("test_net_bps", np.nan),
+        })
+
     decision_df = pd.DataFrame(decisions)
     decision_df.to_csv(tables / "loss_streamline_decision.csv", index=False)
 
@@ -407,6 +422,15 @@ def main() -> None:
     lines.append("\nControls:\n")
     lines.append(table_md(regime_classifier_controls, ["control", "validation_net_bps", "test_net_bps", "test_trades"], n=10, digits=2))
     lines.append("\nInterpretation: the classifier is allowed to choose mean-reversion, trend-continuation, or no-trade, but it still fails the metadata test holdout. The selected classifier is validation-positive, yet test net is negative and cost/latency stress is worse. Therefore the regime idea remains a research direction, not a tradable rule.\n")
+
+    lines.append("## 9. Markowitz / Almgren-Chriss monetization optimizer\n")
+    lines.append("Selection table:\n")
+    lines.append(table_md(monetization, ["decision", "reason", "candidate_set", "spread_fraction", "participation_rate", "execution_horizon_min", "active_signals", "gross_leverage", "train_net_bps", "validation_net_bps", "test_net_bps", "test_max_drawdown_bps", "test_last_trade_proxy_bps"], n=5, digits=2))
+    lines.append("\nSelected strategy weights:\n")
+    lines.append(table_md(monetization_weights, ["signal_id", "stock", "spread_type", "median_stock_spread_bps", "train_half_life_minutes", "weight"], n=12, digits=4))
+    lines.append("\nTop validation frontier rows:\n")
+    lines.append(table_md(monetization_frontier, ["candidate_set", "spread_fraction", "participation_rate", "execution_horizon_min", "markowitz_gamma", "active_signals", "gross_leverage", "train_net_bps", "validation_net_bps", "test_net_bps", "test_max_drawdown_bps"], n=12, digits=2))
+    lines.append("\nInterpretation: the optimizer confirms the bottleneck is monetization rather than a total absence of prediction. Liquid validation-positive strategy streams can be combined into strongly positive train/validation portfolios, but the selected portfolio loses on the holdout after quoted-spread and AC-style execution buffers. The final policy remains no-trade.\n")
 
     lines.append("## Recommended next implementation\n")
     lines.append("1. Keep market-neutral pair/basket trading behind a hard no-trade gate. Do not report it as profitable unless gate_pass_pairs > 0 and the gated test result is positive.\n")

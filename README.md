@@ -39,6 +39,7 @@ The raw build scans about 169GB of gzipped TAQ data, so it is intentionally sepa
 | `scripts/project_config.py` | Shared dataset metadata, universe, and split dates |
 | `scripts/research_utils.py` | Shared panel alignment, returns, OU, last-trade proxy, and spread helpers |
 | `scripts/run_professor_robustness.py` | Spread-definition and transaction-cost robustness requested by professor |
+| `scripts/run_monetization_optimizer.py` | Markowitz/QP-style allocation across liquid pair signals with Almgren-Chriss execution stress |
 | `scripts/run_top20_method_diagnostics.py` | Real-only top-20 pair diagnostics with no-trade gate, lagged Kalman beta, passive stress, exit reasons, and signal buckets |
 | `scripts/run_empirical_execution_model.py` | Empirical bid/ask, latency, passive-fill markout, and capacity cost calibration |
 | `scripts/run_execution_optimized_backtest.py` | Minute-level maker/taker execution screen for pair candidates |
@@ -113,6 +114,9 @@ The new diagnostics include OU/Avellaneda-Lee style mean-reversion scores. The n
 | `output/tables/professor_test_leaderboard.csv` | Validation-selected test results by spread and cost scenario |
 | `output/tables/professor_cost_scenario_results.csv` | Full spread/cost scenario results |
 | `output/tables/professor_ou_spread_diagnostics.csv` | ADF, half-life, and OU diagnostics |
+| `output/tables/monetization_selection.csv` | Markowitz/Almgren-Chriss monetization decision |
+| `output/tables/monetization_markowitz_frontier.csv` | Execution-stressed portfolio frontier across candidate sets |
+| `output/tables/monetization_selected_weights.csv` | Selected strategy weights from the monetization optimizer |
 | `output/tables/top20_trial_registry.csv` | Every top-20 pair-method trial and selection flag |
 | `output/tables/top20_method_comparison_summary.csv` | Method ablation after validation selection and no-trade gate |
 | `output/tables/top20_no_trade_gate.csv` | Why selected active pair rules are accepted or rejected |
@@ -163,9 +167,12 @@ The 12-month finaldata run gives a more conservative conclusion than the old sho
 | Regime-shift audit | corr `0.613` train vs `0.634` test; beta `0.531` vs `0.617` | April short gross about `-851` bps before costs | Linkage does not collapse; April is a directional/signal-regime failure |
 | Regime-gate repair | selected train/validation gate train `+79.63` bps, validation `+280.21` bps | test `-131.36` bps, 2x cost `-210.74` bps | Premium-persistence gates reduce April damage but do not pass final active gate |
 | Supervised regime classifier | validation `+104.32` bps | test `-271.67` bps, 2x cost `-931.31` bps | Learns some validation states but fails holdout and costs; no active claim |
+| Markowitz / AC monetization optimizer | train `+743.62` bps, validation `+526.14` bps | test `-712.26` bps, last-trade proxy `-625.26` bps | Portfolio optimization finds validation signal but cannot monetize it out of sample |
 | Microstructure feature timing refinement | no horizon passes validation gate | best reported test `+0.39` bps with validation `-40.85` bps | Order-flow/spread/volatility features do not rescue timing as a linear rule |
 
 The professor robustness table does find pair/spread definitions where no-cost and 0.25-spread results are strongly positive, while 0.50-spread taker costs often erase the edge. That is the main empirical evidence that execution quality is now the central research question.
+
+The monetization optimizer makes this sharper.  It takes the liquid validation-positive pair signals, allocates across them with a long-only Markowitz/QP-style portfolio, and adds Almgren-Chriss-inspired participation impact and timing-risk buffers.  The best train/validation-selected portfolio is strongly positive in-sample (`+743.62` train, `+526.14` validation), but loses `-712.26` bps in the untouched test window and `-625.26` bps under the clipped last-trade proxy.  That is direct evidence that the bottleneck is monetization: prediction exists in pockets, but the edge is too unstable and slow to convert into robust net P&L.
 
 The top-20 method diagnostics absorb the methodology addendum conservatively:
 there is no synthetic fallback, Kalman beta is lagged, passive entries include

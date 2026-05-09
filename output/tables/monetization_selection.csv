@@ -1,0 +1,2 @@
+decision,reason,selected_strategy,candidate_set,spread_fraction,participation_rate,execution_horizon_min,markowitz_gamma,active_signals,gross_leverage,train_net_bps,validation_net_bps,test_net_bps,test_max_drawdown_bps,test_last_trade_proxy_bps
+no_trade,train/validation-selected monetization portfolio loses test or fails drawdown/execution stress,liquid_validation_sf0.25_pr0.001_h1_g0,liquid_validation,0.25,0.001,1,0.0,3,0.9999999999999999,743.6232838866899,526.1380660135923,-712.2609014337592,-1393.7949667553034,-625.2570221124737

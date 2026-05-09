@@ -33,6 +33,7 @@ def main() -> None:
     run([py, "scripts/run_final_analysis.py"])
     run([py, "scripts/run_sparse_bidask_execution.py"])
     run([py, "scripts/run_professor_robustness.py"])
+    run([py, "scripts/run_monetization_optimizer.py"])
     run([py, "scripts/run_top20_method_diagnostics.py"])
     run([py, "scripts/run_empirical_execution_model.py", "--root", "."])
     robust = [py, "scripts/run_robust_alpha_suite.py", "--root", ".", "--max-subset-size", "5", "--top-candidates", "12", "--n-shifts", "150"]

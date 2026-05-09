@@ -117,6 +117,50 @@ OU and stationarity diagnostics:
 | XLK-MU   | price_regression_residual |     0.35965   |                   7607.93 |                7607.93 |               2153.37  |
 | XLK-CSCO | price_regression_residual |     0.371777  |                   7391.23 |                7391.23 |               2258.36  |
 
+## Monetization Optimizer
+
+The monetization layer treats liquid validation-positive pair signals as strategy return streams.  It allocates across them with a long-only Markowitz/QP-style optimizer and then applies an Almgren-Chriss-inspired execution stress: quoted-spread fraction, square-root participation impact, and execution-horizon timing-risk buffer.  Selection uses train/validation only; test is the holdout.
+
+Selection:
+
+| decision   | reason                                                                                         | candidate_set     |   spread_fraction |   participation_rate |   execution_horizon_min |   active_signals |   gross_leverage |   train_net_bps |   validation_net_bps |   test_net_bps |   test_max_drawdown_bps |
+|:-----------|:-----------------------------------------------------------------------------------------------|:------------------|------------------:|---------------------:|------------------------:|-----------------:|-----------------:|----------------:|---------------------:|---------------:|------------------------:|
+| no_trade   | train/validation-selected monetization portfolio loses test or fails drawdown/execution stress | liquid_validation |              0.25 |                0.001 |                       1 |                3 |                1 |         743.623 |              526.138 |       -712.261 |                -1393.79 |
+
+Selected weights:
+
+| signal_id                                 | stock   | spread_type               |   median_stock_spread_bps |   train_half_life_minutes |     weight |
+|:------------------------------------------|:--------|:--------------------------|--------------------------:|--------------------------:|-----------:|
+| MSFT_price_regression_residual_e1.5_x0.5  | MSFT    | price_regression_residual |                   5.86216 |                   3347.22 | 0.35       |
+| AVGO_price_regression_residual_e1.0_x0.5  | AVGO    | price_regression_residual |                  10.1609  |                  19803.3  | 0.35       |
+| APH_price_regression_residual_e1.0_x0.0   | APH     | price_regression_residual |                   8.2512  |                  12304.1  | 0.3        |
+| QCOM_direct_log_price_e1.25_x0.0          | QCOM    | direct_log_price          |                  10.1143  |                  21644    | 1.7352e-12 |
+| CSCO_price_regression_residual_e1.0_x0.0  | CSCO    | price_regression_residual |                   2.31642 |                   7391.23 | 0          |
+| INTC_price_regression_residual_e1.0_x0.0  | INTC    | price_regression_residual |                   4.31499 |                  10856.2  | 0          |
+| MU_price_regression_residual_e1.25_x0.5   | MU      | price_regression_residual |                   8.96386 |                   7607.93 | 0          |
+| LRCX_price_regression_residual_e1.0_x0.0  | LRCX    | price_regression_residual |                   9.44617 |                   7924.15 | 0          |
+| AAPL_price_regression_residual_e1.25_x0.5 | AAPL    | price_regression_residual |                   2.54677 |                  15909.5  | 0          |
+| AAPL_direct_log_price_e1.0_x0.25          | AAPL    | direct_log_price          |                   2.54677 |                  23563.9  | 0          |
+| QCOM_price_regression_residual_e1.0_x0.5  | QCOM    | price_regression_residual |                  10.1143  |                  18868.4  | 0          |
+| AVGO_direct_log_price_e1.0_x0.5           | AVGO    | direct_log_price          |                  10.1609  |                  23638.3  | 0          |
+
+Top validation frontier rows:
+
+| candidate_set     |   spread_fraction |   participation_rate |   execution_horizon_min |   markowitz_gamma |   active_signals |   gross_leverage |   train_net_bps |   validation_net_bps |   test_net_bps |
+|:------------------|------------------:|---------------------:|------------------------:|------------------:|-----------------:|-----------------:|----------------:|---------------------:|---------------:|
+| liquid_validation |              0.25 |                0.001 |                       1 |             0     |                3 |         1        |        743.623  |              526.138 |       -712.261 |
+| liquid_validation |              0.25 |                0.001 |                       5 |             0     |                3 |         1        |        216.412  |              520.988 |       -752.34  |
+| ou_filtered       |              0.25 |                0.001 |                       1 |             0     |                1 |         0.35     |        580.421  |              253.031 |       -340.857 |
+| ou_filtered       |              0.25 |                0.005 |                       1 |             0     |                1 |         0.35     |        438.825  |              245.506 |       -366.509 |
+| liquid_validation |              0.25 |                0.005 |                       1 |             0     |                1 |         0.35     |        438.825  |              245.506 |       -366.509 |
+| liquid_validation |              0.25 |                0.001 |                       1 |             0.001 |                3 |         0.383473 |        355.933  |              231.426 |       -289.603 |
+| liquid_validation |              0.25 |                0.01  |                       1 |             0     |                1 |         0.35     |        332.724  |              239.868 |       -385.73  |
+| ou_filtered       |              0.25 |                0.01  |                       1 |             0     |                1 |         0.35     |        332.724  |              239.868 |       -385.73  |
+| ou_filtered       |              0.25 |                0.001 |                       5 |             0     |                1 |         0.35     |        210.255  |              233.36  |       -407.916 |
+| liquid_validation |              0.25 |                0.005 |                       5 |             0     |                1 |         0.35     |         68.6595 |              225.836 |       -433.568 |
+| ou_filtered       |              0.25 |                0.005 |                       5 |             0     |                1 |         0.35     |         68.6595 |              225.836 |       -433.568 |
+| ou_filtered       |              0.25 |                0.001 |                       1 |             0.001 |                1 |         0.170081 |        282.054  |              122.96  |       -165.639 |
+
 ## Top-20 Method Diagnostics
 
 The new top-20 method diagnostic layer absorbs the methodology addendum critically rather than copying it wholesale.  It is real-data only, has no synthetic fallback, uses lagged Kalman beta, charges passive-entry adverse selection, writes every tried rule to a trial registry, and applies a no-trade selection gate.
@@ -294,6 +338,7 @@ The maker/taker execution backtest is intentionally treated as a candidate scree
 | named_timing_candidate_micro075_e60 | no_trade                    | named candidate audited on current top-5 basket with metadata test                                                                                 |                    -2695.47   |       -894.791 |                       -894.791 |
 | regime_gated_timing_repair          | no_trade                    | Selected on train/validation only; test is holdout audit. Script label: diagnostic_only.                                                           |                       79.6331 |       -131.358 |                       -131.358 |
 | regime_classifier_timing            | no_trade                    | selected on metadata validation only; test is holdout. Script label: diagnostic_only.                                                              |                      104.318  |       -271.672 |                       -271.672 |
+| markowitz_ac_monetization           | no_trade                    | train/validation-selected monetization portfolio loses test or fails drawdown/execution stress. Script label: no_trade.                            |                      526.138  |       -712.261 |                       -712.261 |
 
 ## Fixed-BPS Timing Controls on Expanded Data
 

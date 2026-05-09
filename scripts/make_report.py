@@ -73,6 +73,9 @@ def markdown_report() -> Path:
     professor = read_optional("professor_test_leaderboard.csv")
     professor_cost = read_optional("professor_cost_scenario_results.csv")
     professor_ou = read_optional("professor_ou_spread_diagnostics.csv")
+    monetization_selection = read_optional("monetization_selection.csv")
+    monetization_weights = read_optional("monetization_selected_weights.csv")
+    monetization_frontier = read_optional("monetization_markowitz_frontier.csv")
     robust_selection = read_optional("robust_alpha_selection.csv")
     robust_controls = read_optional("robust_alpha_controls.csv")
     robust_cost = read_optional("robust_alpha_cost_sensitivity.csv")
@@ -148,6 +151,22 @@ Best validation-selected test rows:
 OU and stationarity diagnostics:
 
 {md_table(professor_ou, ['pair', 'spread_type', 'train_adf_p', 'train_half_life_minutes', 'ou_half_life_minutes', 'train_spread_std_bps'], 15)}
+
+## Monetization Optimizer
+
+The monetization layer treats liquid validation-positive pair signals as strategy return streams.  It allocates across them with a long-only Markowitz/QP-style optimizer and then applies an Almgren-Chriss-inspired execution stress: quoted-spread fraction, square-root participation impact, and execution-horizon timing-risk buffer.  Selection uses train/validation only; test is the holdout.
+
+Selection:
+
+{md_table(monetization_selection, ['decision', 'reason', 'candidate_set', 'spread_fraction', 'participation_rate', 'execution_horizon_min', 'active_signals', 'gross_leverage', 'train_net_bps', 'validation_net_bps', 'test_net_bps', 'test_max_drawdown_bps'], 5)}
+
+Selected weights:
+
+{md_table(monetization_weights, ['signal_id', 'stock', 'spread_type', 'median_stock_spread_bps', 'train_half_life_minutes', 'weight'], 12)}
+
+Top validation frontier rows:
+
+{md_table(monetization_frontier, ['candidate_set', 'spread_fraction', 'participation_rate', 'execution_horizon_min', 'markowitz_gamma', 'active_signals', 'gross_leverage', 'train_net_bps', 'validation_net_bps', 'test_net_bps'], 12)}
 
 ## Top-20 Method Diagnostics
 
@@ -348,6 +367,7 @@ def pdf_report() -> Path:
     holdings = read_optional("selected_xlk_holdings.csv")
     diagnostics = read_optional("minute_data_diagnostics.csv")
     professor = read_optional("professor_test_leaderboard.csv")
+    monetization_selection = read_optional("monetization_selection.csv")
     robust_selection = read_optional("robust_alpha_selection.csv")
     robust_controls = read_optional("robust_alpha_controls.csv")
     timing = read_optional("timing_extension_summary.csv")
@@ -380,6 +400,7 @@ def pdf_report() -> Path:
     table_story(story, "Top Holdings", holdings, ["symbol", "official_weight_pct", "basket_weight"], styles, 4, 25)
     table_story(story, "Data Diagnostics", diagnostics, ["symbol", "minutes", "median_spread_bps", "trade_count"], styles, 2, 25)
     table_story(story, "Professor Cost/Spread Leaderboard", professor, ["pair", "spread_type", "no_cost_midpoint", "quarter_spread_cost", "half_spread_taker_cost", "clipped_last_trade_proxy"], styles, 2, 12)
+    table_story(story, "Monetization Optimizer", monetization_selection, ["decision", "candidate_set", "validation_net_bps", "test_net_bps", "test_max_drawdown_bps"], styles, 2, 5)
     table_story(story, "Sparse Bid/Ask Audit", sparse_bidask, ["sample", "old_net_bps", "new_bidask_cost_bps", "new_bidask_net_bps"], styles, 2, 8)
     table_story(story, "Robust Alpha Selection", robust_selection, ["decision", "economic_label", "selected_strategy", "train_net_bps", "test_net_bps"], styles, 2, 5)
     table_story(story, "Top-20 Method Diagnostics", top20_methods, ["method", "selected_pairs", "gate_pass_pairs", "raw_test_net_bps", "gate_test_net_bps", "test_trades"], styles, 2, 8)

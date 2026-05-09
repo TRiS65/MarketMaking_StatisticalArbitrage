@@ -12,6 +12,7 @@
 | named_timing_candidate_micro075_e60 | no_trade                    | named candidate audited on current top-5 basket with metadata test                                                                                 |                      -2695.47 |        -894.79 |                        -894.79 |
 | regime_gated_timing_repair          | no_trade                    | Selected on train/validation only; test is holdout audit. Script label: diagnostic_only.                                                           |                         79.63 |        -131.36 |                        -131.36 |
 | regime_classifier_timing            | no_trade                    | selected on metadata validation only; test is holdout. Script label: diagnostic_only.                                                              |                        104.32 |        -271.67 |                        -271.67 |
+| markowitz_ac_monetization           | no_trade                    | train/validation-selected monetization portfolio loses test or fails drawdown/execution stress. Script label: no_trade.                            |                        526.14 |        -712.26 |                        -712.26 |
 
 ## 1. Market-neutral / pair-trading PnL attribution
 
@@ -183,6 +184,50 @@ Controls:
 | classifier_active_always_short |              -231.37 |        -744.46 |           480 |
 
 Interpretation: the classifier is allowed to choose mean-reversion, trend-continuation, or no-trade, but it still fails the metadata test holdout. The selected classifier is validation-positive, yet test net is negative and cost/latency stress is worse. Therefore the regime idea remains a research direction, not a tradable rule.
+
+## 9. Markowitz / Almgren-Chriss monetization optimizer
+
+Selection table:
+
+| decision   | reason                                                                                         | candidate_set     |   spread_fraction |   participation_rate |   execution_horizon_min |   active_signals |   gross_leverage |   train_net_bps |   validation_net_bps |   test_net_bps |   test_max_drawdown_bps |   test_last_trade_proxy_bps |
+|:-----------|:-----------------------------------------------------------------------------------------------|:------------------|------------------:|---------------------:|------------------------:|-----------------:|-----------------:|----------------:|---------------------:|---------------:|------------------------:|----------------------------:|
+| no_trade   | train/validation-selected monetization portfolio loses test or fails drawdown/execution stress | liquid_validation |              0.25 |                    0 |                       1 |                3 |                1 |          743.62 |               526.14 |        -712.26 |                -1393.79 |                     -625.26 |
+
+Selected strategy weights:
+
+| signal_id                                 | stock   | spread_type               |   median_stock_spread_bps |   train_half_life_minutes |   weight |
+|:------------------------------------------|:--------|:--------------------------|--------------------------:|--------------------------:|---------:|
+| MSFT_price_regression_residual_e1.5_x0.5  | MSFT    | price_regression_residual |                    5.8622 |                   3347.22 |     0.35 |
+| AVGO_price_regression_residual_e1.0_x0.5  | AVGO    | price_regression_residual |                   10.1609 |                  19803.3  |     0.35 |
+| APH_price_regression_residual_e1.0_x0.0   | APH     | price_regression_residual |                    8.2512 |                  12304.1  |     0.3  |
+| QCOM_direct_log_price_e1.25_x0.0          | QCOM    | direct_log_price          |                   10.1143 |                  21644    |     0    |
+| CSCO_price_regression_residual_e1.0_x0.0  | CSCO    | price_regression_residual |                    2.3164 |                   7391.23 |     0    |
+| INTC_price_regression_residual_e1.0_x0.0  | INTC    | price_regression_residual |                    4.315  |                  10856.2  |     0    |
+| MU_price_regression_residual_e1.25_x0.5   | MU      | price_regression_residual |                    8.9639 |                   7607.93 |     0    |
+| LRCX_price_regression_residual_e1.0_x0.0  | LRCX    | price_regression_residual |                    9.4462 |                   7924.15 |     0    |
+| AAPL_price_regression_residual_e1.25_x0.5 | AAPL    | price_regression_residual |                    2.5468 |                  15909.5  |     0    |
+| AAPL_direct_log_price_e1.0_x0.25          | AAPL    | direct_log_price          |                    2.5468 |                  23563.9  |     0    |
+| QCOM_price_regression_residual_e1.0_x0.5  | QCOM    | price_regression_residual |                   10.1143 |                  18868.4  |     0    |
+| AVGO_direct_log_price_e1.0_x0.5           | AVGO    | direct_log_price          |                   10.1609 |                  23638.3  |     0    |
+
+Top validation frontier rows:
+
+| candidate_set     |   spread_fraction |   participation_rate |   execution_horizon_min |   markowitz_gamma |   active_signals |   gross_leverage |   train_net_bps |   validation_net_bps |   test_net_bps |   test_max_drawdown_bps |
+|:------------------|------------------:|---------------------:|------------------------:|------------------:|-----------------:|-----------------:|----------------:|---------------------:|---------------:|------------------------:|
+| liquid_validation |              0.25 |                 0    |                       1 |                 0 |                3 |             1    |          743.62 |               526.14 |        -712.26 |                -1393.79 |
+| liquid_validation |              0.25 |                 0    |                       5 |                 0 |                3 |             1    |          216.41 |               520.99 |        -752.34 |                -1311.98 |
+| ou_filtered       |              0.25 |                 0    |                       1 |                 0 |                1 |             0.35 |          580.42 |               253.03 |        -340.86 |                 -583.08 |
+| ou_filtered       |              0.25 |                 0.01 |                       1 |                 0 |                1 |             0.35 |          438.82 |               245.51 |        -366.51 |                 -602.91 |
+| liquid_validation |              0.25 |                 0.01 |                       1 |                 0 |                1 |             0.35 |          438.82 |               245.51 |        -366.51 |                 -602.91 |
+| liquid_validation |              0.25 |                 0    |                       1 |                 0 |                3 |             0.38 |          355.93 |               231.43 |        -289.6  |                 -530.1  |
+| liquid_validation |              0.25 |                 0.01 |                       1 |                 0 |                1 |             0.35 |          332.72 |               239.87 |        -385.73 |                 -617.78 |
+| ou_filtered       |              0.25 |                 0.01 |                       1 |                 0 |                1 |             0.35 |          332.72 |               239.87 |        -385.73 |                 -617.78 |
+| ou_filtered       |              0.25 |                 0    |                       5 |                 0 |                1 |             0.35 |          210.26 |               233.36 |        -407.92 |                 -636.17 |
+| liquid_validation |              0.25 |                 0.01 |                       5 |                 0 |                1 |             0.35 |           68.66 |               225.84 |        -433.57 |                 -661.47 |
+| ou_filtered       |              0.25 |                 0.01 |                       5 |                 0 |                1 |             0.35 |           68.66 |               225.84 |        -433.57 |                 -661.47 |
+| ou_filtered       |              0.25 |                 0    |                       1 |                 0 |                1 |             0.17 |          282.05 |               122.96 |        -165.64 |                 -283.34 |
+
+Interpretation: the optimizer confirms the bottleneck is monetization rather than a total absence of prediction. Liquid validation-positive strategy streams can be combined into strongly positive train/validation portfolios, but the selected portfolio loses on the holdout after quoted-spread and AC-style execution buffers. The final policy remains no-trade.
 
 ## Recommended next implementation
 

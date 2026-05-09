@@ -7,3 +7,4 @@ timing_robustness_current_selection,no_trade,No XLK-only timing rule passed trai
 named_timing_candidate_micro075_e60,no_trade,named candidate audited on current top-5 basket with metadata test,-2695.474958468012,-894.7909209969378,-894.7909209969378
 regime_gated_timing_repair,no_trade,Selected on train/validation only; test is holdout audit. Script label: diagnostic_only.,79.63307239512228,-131.35771604813883,-131.35771604813883
 regime_classifier_timing,no_trade,selected on metadata validation only; test is holdout. Script label: diagnostic_only.,104.31768035007428,-271.6724257877619,-271.6724257877619
+markowitz_ac_monetization,no_trade,train/validation-selected monetization portfolio loses test or fails drawdown/execution stress. Script label: no_trade.,526.1380660135923,-712.2609014337592,-712.2609014337592

@@ -1,0 +1,16 @@
+signal_id,stock,spread_type,median_stock_spread_bps,train_half_life_minutes,weight
+MSFT_price_regression_residual_e1.5_x0.5,MSFT,price_regression_residual,5.862155598358026,3347.222044882475,0.34999999999584447
+AVGO_price_regression_residual_e1.0_x0.5,AVGO,price_regression_residual,10.160862190033328,19803.333045808868,0.34999999999584447
+APH_price_regression_residual_e1.0_x0.0,APH,price_regression_residual,8.251203300481633,12304.137184860369,0.30000000000657584
+QCOM_direct_log_price_e1.25_x0.0,QCOM,direct_log_price,10.114291493881236,21643.95381561591,1.7351987901886228e-12
+CSCO_price_regression_residual_e1.0_x0.0,CSCO,price_regression_residual,2.316423442204774,7391.234185010117,0.0
+INTC_price_regression_residual_e1.0_x0.0,INTC,price_regression_residual,4.314994606255883,10856.184790389518,0.0
+MU_price_regression_residual_e1.25_x0.5,MU,price_regression_residual,8.963859348897806,7607.930038454041,0.0
+LRCX_price_regression_residual_e1.0_x0.0,LRCX,price_regression_residual,9.446167115016932,7924.151344920195,0.0
+AAPL_price_regression_residual_e1.25_x0.5,AAPL,price_regression_residual,2.546769614412299,15909.511229187783,0.0
+AAPL_direct_log_price_e1.0_x0.25,AAPL,direct_log_price,2.546769614412299,23563.870755673703,0.0
+QCOM_price_regression_residual_e1.0_x0.5,QCOM,price_regression_residual,10.114291493881236,18868.399421478374,0.0
+AVGO_direct_log_price_e1.0_x0.5,AVGO,direct_log_price,10.160862190033328,23638.27525087847,0.0
+PLTR_price_regression_residual_e1.0_x0.5,PLTR,price_regression_residual,4.272819526785905,20775.152264342138,0.0
+IBM_direct_log_price_e1.0_x0.25,IBM,direct_log_price,11.112794880511773,23056.87382102122,0.0
+AMD_direct_log_price_e1.0_x0.5,AMD,direct_log_price,6.831767719897378,29047.07547177975,0.0
