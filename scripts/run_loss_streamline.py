@@ -158,7 +158,7 @@ def profit_search_diagnosis(df: pd.DataFrame, min_cost_buffer: float) -> pd.Data
         out.loc[posterior, "candidate_train_gate"] = False
         out["posterior_protocol_flag"] = posterior
     out["legacy_output_warning"] = (
-        "profit_search table predates the expanded top-20 pipeline; treat as candidate shape, not final finaldata evidence"
+        "profit_search table predates the finaldata top-20 pipeline; treat as candidate shape, not final evidence"
     )
     return out.sort_values(["candidate_train_gate", "test_net_bps"], ascending=[False, False])
 
@@ -270,7 +270,7 @@ def main() -> None:
             decisions.append({
                 "research_path": "fixed_bps_xlk_only_timing_candidate",
                 "decision": "legacy_candidate_shape_only",
-                "reason": "legacy profit-search output is Jan-Feb positive, but it predates expanded top-20 controls and is not final evidence",
+                "reason": "legacy profit-search output is Jan-Feb positive, but it predates finaldata top-20 controls and is not final evidence",
                 "train_or_validation_net_bps": r.get("train_net_bps", np.nan),
                 "test_net_bps": r.get("test_net_bps", np.nan),
                 "raw_test_net_bps_before_gate": r.get("test_net_bps", np.nan),
@@ -288,9 +288,9 @@ def main() -> None:
     if not fixed_bps.empty:
         r = fixed_bps.iloc[0]
         decisions.append({
-            "research_path": "expanded_fixed_bps_xlk_only_timing",
+            "research_path": "finaldata_fixed_bps_xlk_only_timing",
             "decision": str(r.get("decision", "no_trade")),
-            "reason": str(r.get("reason", "expanded-sample fixed-bps control result")),
+            "reason": str(r.get("reason", "finaldata fixed-bps control result")),
             "train_or_validation_net_bps": r.get("train_net_bps", np.nan),
             "test_net_bps": r.get("test_net_bps", np.nan),
             "raw_test_net_bps_before_gate": r.get("test_net_bps", np.nan),
@@ -355,6 +355,44 @@ def main() -> None:
         })
 
     decision_df = pd.DataFrame(decisions)
+    if not decision_df.empty:
+        final_12m = {
+            "market_neutral_pair_or_basket",
+            "robust_alpha_suite_selected",
+            "finaldata_fixed_bps_xlk_only_timing",
+            "timing_robustness_current_selection",
+            "named_timing_candidate_micro075_e60",
+            "markowitz_ac_monetization",
+        }
+        diagnostic = {"regime_gated_timing_repair", "regime_classifier_timing"}
+
+        def evidence_tier(path: str) -> str:
+            if path == "fixed_bps_xlk_only_timing_candidate":
+                return "legacy_candidate_screen"
+            if path in diagnostic:
+                return "diagnostic_only_overlay"
+            if path in final_12m:
+                return "final_12m_evidence"
+            return "auxiliary"
+
+        def policy_role(row: pd.Series) -> str:
+            tier = row["evidence_tier"]
+            decision = str(row.get("decision", ""))
+            if tier == "legacy_candidate_screen":
+                return "not_policy_eligible"
+            if tier == "diagnostic_only_overlay":
+                return "diagnostic_not_tradeable"
+            if decision in {"candidate_active", "active_candidate"}:
+                return "candidate_requires_controls"
+            return "selected_no_trade_policy"
+
+        decision_df["evidence_tier"] = decision_df["research_path"].map(evidence_tier)
+        decision_df["policy_role"] = decision_df.apply(policy_role, axis=1)
+        decision_df["selected_trading_policy"] = np.where(
+            decision_df["policy_role"].eq("selected_no_trade_policy"),
+            "no_trade",
+            "not_selected_for_trading",
+        )
     decision_df.to_csv(tables / "loss_streamline_decision.csv", index=False)
 
     lines: list[str] = []
@@ -363,8 +401,11 @@ def main() -> None:
     if decision_df.empty:
         lines.append("No decision table could be produced because expected output tables were not found.\n")
     else:
-        lines.append(table_md(decision_df, ["research_path", "decision", "reason", "train_or_validation_net_bps", "test_net_bps", "raw_test_net_bps_before_gate"], digits=2))
+        lines.append(table_md(decision_df, ["research_path", "evidence_tier", "policy_role", "decision", "selected_trading_policy", "reason", "train_or_validation_net_bps", "test_net_bps", "raw_test_net_bps_before_gate"], digits=2))
         lines.append("")
+        final_rows = decision_df[decision_df["evidence_tier"].eq("final_12m_evidence")]
+        if not final_rows.empty and (final_rows["selected_trading_policy"] == "no_trade").all():
+            lines.append("**Actual selected trading policy:** `no_trade`. Legacy positive screens and diagnostic overlays are not policy-eligible final evidence.\n")
     lines.append("## 1. Market-neutral / pair-trading PnL attribution\n")
     lines.append(table_md(method, ["method", "selected_pairs", "gate_pass_pairs", "raw_validation_net_bps", "raw_test_net_bps", "raw_test_net_per_trade_bps", "raw_positive_test_pairs", "gate_test_net_bps", "test_trades"], digits=2))
     lines.append("\nInterpretation: if gate_test_net_bps is zero, the economically selected policy is no-trade. Negative raw_test_net_bps indicates that model filters reduce losses but do not create tradable alpha.\n")
@@ -394,7 +435,7 @@ def main() -> None:
         lines.append("")
     lines.append("Legacy profit-search screen:\n")
     lines.append(table_md(profit, ["protocol", "hedge", "signal_price", "signal_kind", "hedge_frac", "threshold_bps", "exit_bps", "max_hold", "jan_net_bps", "feb_net_bps", "train_net_bps", "test_net_bps", "test_gross_per_trade_bps", "test_cost_per_trade_bps", "test_net_per_trade_bps", "test_cost_capacity_x", "candidate_train_gate"], n=10, digits=2))
-    lines.append("\nInterpretation: a positive fixed-bps timing candidate is not the same as market-neutral arbitrage. The existing profit-search file is treated as a legacy candidate screen unless it is regenerated on the expanded top-20 sample. It should be promoted only if it passes sign-flip, always-long/short, circular-shift, latency, and cost-multiplier stress tests on the current data.\n")
+    lines.append("\nInterpretation: a positive fixed-bps timing candidate is not the same as market-neutral arbitrage. The existing profit-search file is treated as a legacy candidate screen unless it is regenerated on the finaldata top-20 sample. It should be promoted only if it passes sign-flip, always-long/short, circular-shift, latency, and cost-multiplier stress tests on the current data.\n")
 
     lines.append("## 5. Signal-bucket regime check\n")
     lines.append(table_md(buckets, ["sample", "horizon_min", "linear_slope_bps_per_decile", "decile0_future_bps", "decile9_future_bps", "best_decile", "best_decile_future_bps"], n=30, digits=2))

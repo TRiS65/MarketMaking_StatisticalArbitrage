@@ -1,10 +1,10 @@
-research_path,decision,reason,train_or_validation_net_bps,test_net_bps,raw_test_net_bps_before_gate
-market_neutral_pair_or_basket,no_trade,validation-selected active pair/basket rules fail no-trade gate or lose after costs,,0.0,-51353.29740418585
-robust_alpha_suite_selected,no_trade,selected robust-alpha rule loses OOS or does not beat no-trade,335.68769639741913,-202.2137199882398,-202.2137199882398
-fixed_bps_xlk_only_timing_candidate,legacy_candidate_shape_only,"legacy profit-search output is Jan-Feb positive, but it predates expanded top-20 controls and is not final evidence",456.47909374165073,613.3530614958253,613.3530614958253
-expanded_fixed_bps_xlk_only_timing,no_trade,train_or_validation_net<=0;test_net<=0;2x_cost_test<=0;latency1_test<=0;does_not_beat_directional_control;sign_flip_not_worse;circular_pvalue>0.10,-2572.037897886701,-977.2390831260766,-977.2390831260766
-timing_robustness_current_selection,no_trade,No XLK-only timing rule passed train/validation filters.,0.0,0.0,0.0
-named_timing_candidate_micro075_e60,no_trade,named candidate audited on current top-5 basket with metadata test,-2695.474958468012,-894.7909209969378,-894.7909209969378
-regime_gated_timing_repair,no_trade,Selected on train/validation only; test is holdout audit. Script label: diagnostic_only.,79.63307239512228,-131.35771604813883,-131.35771604813883
-regime_classifier_timing,no_trade,selected on metadata validation only; test is holdout. Script label: diagnostic_only.,104.31768035007428,-271.6724257877619,-271.6724257877619
-markowitz_ac_monetization,no_trade,train/validation-selected monetization portfolio loses test or fails drawdown/execution stress. Script label: no_trade.,526.1380660135923,-712.2609014337592,-712.2609014337592
+research_path,decision,reason,train_or_validation_net_bps,test_net_bps,raw_test_net_bps_before_gate,evidence_tier,policy_role,selected_trading_policy
+market_neutral_pair_or_basket,no_trade,validation-selected active pair/basket rules fail no-trade gate or lose after costs,,0.0,-51353.29740418585,final_12m_evidence,selected_no_trade_policy,no_trade
+robust_alpha_suite_selected,no_trade,selected robust-alpha rule loses OOS or does not beat no-trade,335.68769639741913,-202.2137199882398,-202.2137199882398,final_12m_evidence,selected_no_trade_policy,no_trade
+fixed_bps_xlk_only_timing_candidate,legacy_candidate_shape_only,"legacy profit-search output is Jan-Feb positive, but it predates finaldata top-20 controls and is not final evidence",456.47909374165073,613.3530614958253,613.3530614958253,legacy_candidate_screen,not_policy_eligible,not_selected_for_trading
+finaldata_fixed_bps_xlk_only_timing,no_trade,train_or_validation_net<=0;test_net<=0;2x_cost_test<=0;latency1_test<=0;does_not_beat_directional_control;sign_flip_not_worse;circular_pvalue>0.10,-2572.037897886701,-977.2390831260766,-977.2390831260766,final_12m_evidence,selected_no_trade_policy,no_trade
+timing_robustness_current_selection,no_trade,No XLK-only timing rule passed train/validation filters.,0.0,0.0,0.0,final_12m_evidence,selected_no_trade_policy,no_trade
+named_timing_candidate_micro075_e60,no_trade,named candidate audited on current top-5 basket with metadata test,-2695.474958468012,-894.7909209969378,-894.7909209969378,final_12m_evidence,selected_no_trade_policy,no_trade
+regime_gated_timing_repair,no_trade,Selected on train/validation only; test is holdout audit. Script label: diagnostic_only.,79.63307239512228,-131.35771604813883,-131.35771604813883,diagnostic_only_overlay,diagnostic_not_tradeable,not_selected_for_trading
+regime_classifier_timing,no_trade,selected on metadata validation only; test is holdout. Script label: diagnostic_only.,104.31768035007428,-271.6724257877619,-271.6724257877619,diagnostic_only_overlay,diagnostic_not_tradeable,not_selected_for_trading
+markowitz_ac_monetization,no_trade,train/validation-selected monetization portfolio loses test or fails drawdown/execution stress. Script label: no_trade.,526.1380660135923,-712.2609014337592,-712.2609014337592,final_12m_evidence,selected_no_trade_policy,no_trade

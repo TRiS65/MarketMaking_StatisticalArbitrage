@@ -17,6 +17,27 @@ The project now separates two claims:
 
 This language directly addresses the professor's concern that price definition, spread construction, and execution assumptions can dominate high-frequency results.
 
+## Evidence Hierarchy and Final Policy
+
+The final report separates four categories so old positive screens are not confused with the selected trading policy:
+
+1. **Final 12-month evidence:** experiments regenerated on `data/finaldata` with the metadata split.
+2. **Legacy candidate screens:** older positive `profit_search_*` rows kept only as historical motivation.
+3. **Diagnostic-only overlays:** regime gates and classifiers that explain failure modes but are not tradeable final policies.
+4. **Actual selected trading policy:** `no_trade`, because no final 12-month active rule survives the holdout and execution gates.
+
+| research_path                       | evidence_tier           | policy_role              | decision                    | selected_trading_policy   |   train_or_validation_net_bps |   test_net_bps |
+|:------------------------------------|:------------------------|:-------------------------|:----------------------------|:--------------------------|------------------------------:|---------------:|
+| market_neutral_pair_or_basket       | final_12m_evidence      | selected_no_trade_policy | no_trade                    | no_trade                  |                      nan      |          0     |
+| robust_alpha_suite_selected         | final_12m_evidence      | selected_no_trade_policy | no_trade                    | no_trade                  |                      335.688  |       -202.214 |
+| fixed_bps_xlk_only_timing_candidate | legacy_candidate_screen | not_policy_eligible      | legacy_candidate_shape_only | not_selected_for_trading  |                      456.479  |        613.353 |
+| finaldata_fixed_bps_xlk_only_timing | final_12m_evidence      | selected_no_trade_policy | no_trade                    | no_trade                  |                    -2572.04   |       -977.239 |
+| timing_robustness_current_selection | final_12m_evidence      | selected_no_trade_policy | no_trade                    | no_trade                  |                        0      |          0     |
+| named_timing_candidate_micro075_e60 | final_12m_evidence      | selected_no_trade_policy | no_trade                    | no_trade                  |                    -2695.47   |       -894.791 |
+| regime_gated_timing_repair          | diagnostic_only_overlay | diagnostic_not_tradeable | no_trade                    | not_selected_for_trading  |                       79.6331 |       -131.358 |
+| regime_classifier_timing            | diagnostic_only_overlay | diagnostic_not_tradeable | no_trade                    | not_selected_for_trading  |                      104.318  |       -271.672 |
+| markowitz_ac_monetization           | final_12m_evidence      | selected_no_trade_policy | no_trade                    | no_trade                  |                      526.138  |       -712.261 |
+
 ## Top Holdings Used
 
 | symbol   | name                        |   official_weight_pct |   basket_weight | used_in_clean_panel   |
@@ -328,21 +349,21 @@ The maker/taker execution backtest is intentionally treated as a candidate scree
 
 ## Loss Streamline Decision
 
-| research_path                       | decision                    | reason                                                                                                                                             |   train_or_validation_net_bps |   test_net_bps |   raw_test_net_bps_before_gate |
-|:------------------------------------|:----------------------------|:---------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------:|---------------:|-------------------------------:|
-| market_neutral_pair_or_basket       | no_trade                    | validation-selected active pair/basket rules fail no-trade gate or lose after costs                                                                |                      nan      |          0     |                     -51353.3   |
-| robust_alpha_suite_selected         | no_trade                    | selected robust-alpha rule loses OOS or does not beat no-trade                                                                                     |                      335.688  |       -202.214 |                       -202.214 |
-| fixed_bps_xlk_only_timing_candidate | legacy_candidate_shape_only | legacy profit-search output is Jan-Feb positive, but it predates expanded top-20 controls and is not final evidence                                |                      456.479  |        613.353 |                        613.353 |
-| expanded_fixed_bps_xlk_only_timing  | no_trade                    | train_or_validation_net<=0;test_net<=0;2x_cost_test<=0;latency1_test<=0;does_not_beat_directional_control;sign_flip_not_worse;circular_pvalue>0.10 |                    -2572.04   |       -977.239 |                       -977.239 |
-| timing_robustness_current_selection | no_trade                    | No XLK-only timing rule passed train/validation filters.                                                                                           |                        0      |          0     |                          0     |
-| named_timing_candidate_micro075_e60 | no_trade                    | named candidate audited on current top-5 basket with metadata test                                                                                 |                    -2695.47   |       -894.791 |                       -894.791 |
-| regime_gated_timing_repair          | no_trade                    | Selected on train/validation only; test is holdout audit. Script label: diagnostic_only.                                                           |                       79.6331 |       -131.358 |                       -131.358 |
-| regime_classifier_timing            | no_trade                    | selected on metadata validation only; test is holdout. Script label: diagnostic_only.                                                              |                      104.318  |       -271.672 |                       -271.672 |
-| markowitz_ac_monetization           | no_trade                    | train/validation-selected monetization portfolio loses test or fails drawdown/execution stress. Script label: no_trade.                            |                      526.138  |       -712.261 |                       -712.261 |
+| research_path                       | evidence_tier           | policy_role              | decision                    | selected_trading_policy   |   train_or_validation_net_bps |   test_net_bps |
+|:------------------------------------|:------------------------|:-------------------------|:----------------------------|:--------------------------|------------------------------:|---------------:|
+| market_neutral_pair_or_basket       | final_12m_evidence      | selected_no_trade_policy | no_trade                    | no_trade                  |                      nan      |          0     |
+| robust_alpha_suite_selected         | final_12m_evidence      | selected_no_trade_policy | no_trade                    | no_trade                  |                      335.688  |       -202.214 |
+| fixed_bps_xlk_only_timing_candidate | legacy_candidate_screen | not_policy_eligible      | legacy_candidate_shape_only | not_selected_for_trading  |                      456.479  |        613.353 |
+| finaldata_fixed_bps_xlk_only_timing | final_12m_evidence      | selected_no_trade_policy | no_trade                    | no_trade                  |                    -2572.04   |       -977.239 |
+| timing_robustness_current_selection | final_12m_evidence      | selected_no_trade_policy | no_trade                    | no_trade                  |                        0      |          0     |
+| named_timing_candidate_micro075_e60 | final_12m_evidence      | selected_no_trade_policy | no_trade                    | no_trade                  |                    -2695.47   |       -894.791 |
+| regime_gated_timing_repair          | diagnostic_only_overlay | diagnostic_not_tradeable | no_trade                    | not_selected_for_trading  |                       79.6331 |       -131.358 |
+| regime_classifier_timing            | diagnostic_only_overlay | diagnostic_not_tradeable | no_trade                    | not_selected_for_trading  |                      104.318  |       -271.672 |
+| markowitz_ac_monetization           | final_12m_evidence      | selected_no_trade_policy | no_trade                    | no_trade                  |                      526.138  |       -712.261 |
 
-## Fixed-BPS Timing Controls on Expanded Data
+## Fixed-BPS Timing Controls on Finaldata
 
-This section regenerates the old fixed-bps sparse timing candidate shape on the expanded top-20 panel.  The old `profit_search_*` tables are legacy candidate screens; this is the current-data control result.
+This section regenerates the old fixed-bps sparse timing candidate shape on the finaldata top-20 panel.  The old `profit_search_*` tables are legacy candidate screens; this is the current-data control result.
 
 | decision   | reason                                                                                                                                             | basket_symbols         |   train_net_bps |   validation_net_bps |   test_net_bps |   test_2x_cost_net_bps |   test_latency1_net_bps |   circular_pvalue |
 |:-----------|:---------------------------------------------------------------------------------------------------------------------------------------------------|:-----------------------|----------------:|---------------------:|---------------:|-----------------------:|------------------------:|------------------:|
@@ -442,7 +463,7 @@ Named candidate execution audit:
 
 ## Regime Shift Diagnostics
 
-The regime-shift check asks whether poor timing performance comes from a broken XLK/basket linkage, wider execution costs, or a directional signal failure.  The expanded-sample evidence points mainly to signal-direction instability: XLK/basket correlation and beta do not collapse, but April is a strong XLK rally in which the positive premium stays persistent and the contrarian rule remains short XLK for too long.
+The regime-shift check asks whether poor timing performance comes from a broken XLK/basket linkage, wider execution costs, or a directional signal failure.  The finaldata evidence points mainly to signal-direction instability: XLK/basket correlation and beta do not collapse, but April is a strong XLK rally in which the positive premium stays persistent and the contrarian rule remains short XLK for too long.
 
 Train/validation/test regime summary:
 
@@ -665,7 +686,7 @@ The next report should avoid saying "ETF arbitrage is profitable" unless a marke
 3. Extend signal bucket tests into formal timing selection only if the decile relation is stable across train/validation/test.
 4. Add portfolio-level drawdown / VaR constraints for correlated constituent losses.
 5. Add a formal DSR / multiple-testing section using the trial registry as the denominator.
-6. Regenerate the fixed-bps sparse5 timing candidate on the expanded top-20 sample before using it as final evidence; legacy profit-search outputs are candidate shapes only.
+6. Treat legacy profit-search outputs as candidate shapes only; final evidence must come from the current finaldata pipeline and metadata split.
 7. If pursuing a positive extension, move from linear microstructure timing to conditional gates: avoid high spread / high volatility states, trade only where order-flow and basket-premium signs agree, and validate on event-level fills.
 8. Add a trend/regime gate before any contrarian XLK-only timing claim.  The April audit shows that persistent positive premium during an aligned XLK/basket rally can make the strategy short the ETF into a strong uptrend; this should trigger no-trade or one-sided trading restrictions.
 

@@ -127,6 +127,17 @@ The project now separates two claims:
 
 This language directly addresses the professor's concern that price definition, spread construction, and execution assumptions can dominate high-frequency results.
 
+## Evidence Hierarchy and Final Policy
+
+The final report separates four categories so old positive screens are not confused with the selected trading policy:
+
+1. **Final 12-month evidence:** experiments regenerated on `data/finaldata` with the metadata split.
+2. **Legacy candidate screens:** older positive `profit_search_*` rows kept only as historical motivation.
+3. **Diagnostic-only overlays:** regime gates and classifiers that explain failure modes but are not tradeable final policies.
+4. **Actual selected trading policy:** `no_trade`, because no final 12-month active rule survives the holdout and execution gates.
+
+{md_table(loss_decision, ['research_path', 'evidence_tier', 'policy_role', 'decision', 'selected_trading_policy', 'train_or_validation_net_bps', 'test_net_bps'], 12)}
+
 ## Top Holdings Used
 
 {md_table(holdings, ['symbol', 'name', 'official_weight_pct', 'basket_weight', 'used_in_clean_panel'], 25)}
@@ -210,11 +221,11 @@ The maker/taker execution backtest is intentionally treated as a candidate scree
 
 ## Loss Streamline Decision
 
-{md_table(loss_decision, ['research_path', 'decision', 'reason', 'train_or_validation_net_bps', 'test_net_bps', 'raw_test_net_bps_before_gate'], 10)}
+{md_table(loss_decision, ['research_path', 'evidence_tier', 'policy_role', 'decision', 'selected_trading_policy', 'train_or_validation_net_bps', 'test_net_bps'], 10)}
 
-## Fixed-BPS Timing Controls on Expanded Data
+## Fixed-BPS Timing Controls on Finaldata
 
-This section regenerates the old fixed-bps sparse timing candidate shape on the expanded top-20 panel.  The old `profit_search_*` tables are legacy candidate screens; this is the current-data control result.
+This section regenerates the old fixed-bps sparse timing candidate shape on the finaldata top-20 panel.  The old `profit_search_*` tables are legacy candidate screens; this is the current-data control result.
 
 {md_table(fixed_bps_selection, ['decision', 'reason', 'basket_symbols', 'train_net_bps', 'validation_net_bps', 'test_net_bps', 'test_2x_cost_net_bps', 'test_latency1_net_bps', 'circular_pvalue'], 5)}
 
@@ -260,7 +271,7 @@ Named candidate execution audit:
 
 ## Regime Shift Diagnostics
 
-The regime-shift check asks whether poor timing performance comes from a broken XLK/basket linkage, wider execution costs, or a directional signal failure.  The expanded-sample evidence points mainly to signal-direction instability: XLK/basket correlation and beta do not collapse, but April is a strong XLK rally in which the positive premium stays persistent and the contrarian rule remains short XLK for too long.
+The regime-shift check asks whether poor timing performance comes from a broken XLK/basket linkage, wider execution costs, or a directional signal failure.  The finaldata evidence points mainly to signal-direction instability: XLK/basket correlation and beta do not collapse, but April is a strong XLK rally in which the positive premium stays persistent and the contrarian rule remains short XLK for too long.
 
 Train/validation/test regime summary:
 
@@ -347,7 +358,7 @@ The next report should avoid saying "ETF arbitrage is profitable" unless a marke
 3. Extend signal bucket tests into formal timing selection only if the decile relation is stable across train/validation/test.
 4. Add portfolio-level drawdown / VaR constraints for correlated constituent losses.
 5. Add a formal DSR / multiple-testing section using the trial registry as the denominator.
-6. Regenerate the fixed-bps sparse5 timing candidate on the expanded top-20 sample before using it as final evidence; legacy profit-search outputs are candidate shapes only.
+6. Treat legacy profit-search outputs as candidate shapes only; final evidence must come from the current finaldata pipeline and metadata split.
 7. If pursuing a positive extension, move from linear microstructure timing to conditional gates: avoid high spread / high volatility states, trade only where order-flow and basket-premium signs agree, and validate on event-level fills.
 8. Add a trend/regime gate before any contrarian XLK-only timing claim.  The April audit shows that persistent positive premium during an aligned XLK/basket rally can make the strategy short the ETF into a strong uptrend; this should trigger no-trade or one-sided trading restrictions.
 
@@ -408,8 +419,8 @@ def pdf_report() -> Path:
     table_story(story, "Empirical Symbol Costs", empirical_symbol_costs, ["symbol", "median_spread_bps", "p90_spread_bps", "median_halfspread_bps", "median_volume"], styles, 2, 20)
     table_story(story, "Latency Taker Costs", empirical_latency, ["symbol", "latency_min", "buy_taker_cost_bps_median", "sell_taker_cost_bps_median"], styles, 2, 20)
     table_story(story, "Execution-Optimized Pair Audit", execution_selection, ["stock", "spread_type", "policy", "val_net_bps", "test_net_bps", "oos_decision", "final_policy"], styles, 2, 5)
-    table_story(story, "Loss Streamline Decision", loss_decision, ["research_path", "decision", "test_net_bps"], styles, 2, 5)
-    table_story(story, "Expanded Fixed-BPS Timing Controls", fixed_bps_selection, ["decision", "basket_symbols", "train_net_bps", "validation_net_bps", "test_net_bps", "circular_pvalue"], styles, 2, 5)
+    table_story(story, "Loss Streamline Decision", loss_decision, ["research_path", "evidence_tier", "policy_role", "decision", "test_net_bps"], styles, 2, 5)
+    table_story(story, "Finaldata Fixed-BPS Timing Controls", fixed_bps_selection, ["decision", "basket_symbols", "train_net_bps", "validation_net_bps", "test_net_bps", "circular_pvalue"], styles, 2, 5)
     table_story(story, "Microstructure Refinement Horizon Sweep", micro_refine, ["horizon_min", "decision", "train_net_bps", "validation_net_bps", "test_net_bps", "test_trades"], styles, 2, 8)
     table_story(story, "Current Timing Robustness Re-Audit", timing_robust_decision, ["decision", "reason", "train_net_bps", "test_net_bps"], styles, 2, 5)
     table_story(story, "Named Timing Candidate Re-Audit", timing_robust_target, ["strategy", "basket_symbols", "train_net_bps", "mar_net_bps", "apr_net_bps", "test_net_bps"], styles, 2, 5)

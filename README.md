@@ -43,7 +43,7 @@ The raw build scans about 169GB of gzipped TAQ data, so it is intentionally sepa
 | `scripts/run_top20_method_diagnostics.py` | Real-only top-20 pair diagnostics with no-trade gate, lagged Kalman beta, passive stress, exit reasons, and signal buckets |
 | `scripts/run_empirical_execution_model.py` | Empirical bid/ask, latency, passive-fill markout, and capacity cost calibration |
 | `scripts/run_execution_optimized_backtest.py` | Minute-level maker/taker execution screen for pair candidates |
-| `scripts/run_fixed_bps_timing_controls.py` | Expanded-sample controls for the fixed-bps XLK-only timing candidate shape |
+| `scripts/run_fixed_bps_timing_controls.py` | Finaldata controls for the fixed-bps XLK-only timing candidate shape |
 | `scripts/run_timing_robustness.py` | Current top-5 XLK-only timing robustness with metadata test holdout and exact bid/ask latency audit |
 | `scripts/run_regime_shift_diagnostics.py` | Regime-shift audit explaining whether poor timing comes from linkage, costs, or signal direction |
 | `scripts/run_regime_gate_experiments.py` | Trend/premium-persistence no-trade gates for the April timing failure |
@@ -126,7 +126,7 @@ The new diagnostics include OU/Avellaneda-Lee style mean-reversion scores. The n
 | `output/tables/empirical_taker_latency_costs.csv` | Quote-boundary taker cost using 0/1/2/5 minute latency quotes |
 | `output/tables/empirical_passive_fill_model.csv` | Last-trade touch-fill and markout proxy by symbol/time/spread/imbalance bucket |
 | `output/tables/execution_optimized_selection.csv` | Maker/taker execution-screen selection and OOS audit |
-| `output/tables/fixed_bps_timing_selection.csv` | Expanded-sample fixed-bps timing decision and controls summary |
+| `output/tables/fixed_bps_timing_selection.csv` | Finaldata fixed-bps timing decision and controls summary |
 | `output/tables/timing_robustness_decision.csv` | Current train/validation-selected timing decision with metadata test holdout |
 | `output/tables/timing_robustness_target_rule.csv` | Re-audit of `micro_shrink_0.75_cw10d_e60_x0_mh240` on the current top-5 basket |
 | `output/tables/regime_shift_summary.csv` | Train/test regime diagnostics for XLK/basket linkage, spread, signal scale, and signal IC |
@@ -143,11 +143,20 @@ The new diagnostics include OU/Avellaneda-Lee style mean-reversion scores. The n
 | `output/research_report.md` | Current markdown report |
 | `output/research_report.pdf` | Current PDF report |
 
-## Current Reporting Language
+## Evidence Hierarchy and Final Policy
 
-Use this wording unless the new market-neutral results clearly overturn it:
+The repository separates final evidence from diagnostic or legacy artifacts:
 
-> Market-neutral XLK-vs-basket arbitrage remains fragile under realistic TAQ execution assumptions. The more promising direction is to use the sparse/top-holdings basket as a fair-value signal and trade XLK only. This timing strategy is not market neutral, so it must be reported with directional controls, sign-flip controls, circular-shift tests, and cost-scenario sensitivity.
+| Tier | Meaning | Policy role |
+|---|---|---|
+| Final 12-month evidence | Regenerated on `data/finaldata` using the metadata split | Policy-eligible |
+| Legacy candidate screen | Older `profit_search_*` positive rows | Historical motivation only |
+| Diagnostic-only overlay | Regime gate / classifier experiments | Explains failure modes, not a trading policy |
+| Actual selected policy | Result after no-trade gates and execution stress | `no_trade` |
+
+Use this wording unless a future finaldata run clearly overturns it:
+
+> Final 12-month evidence shows pockets of gross and low-cost relative-value signal, but no active market-neutral, XLK-only timing, regime-classifier, or Markowitz/AC monetization rule survives the holdout and execution gates. The selected trading policy is no-trade. The research conclusion is not “no signal”; it is “signal exists in pockets, but monetization fails under realistic costs, slow reversion, and regime instability.”
 
 ## Final-Data Quick Results Snapshot
 
@@ -161,7 +170,7 @@ The 12-month finaldata run gives a more conservative conclusion than the old sho
 | Robust alpha quick selected XLK-only timing | train `+335.69` bps | test `-202.21` bps | Train-positive but fails OOS |
 | Top-20 pair method diagnostics after no-trade gate | varies | `0.00` bps | Every validation-selected pair method fails at least one gate |
 | Execution-optimized pair screen | validation candidate `+3083.69` bps | test `-3416.85` bps | Validation false positive; final policy remains no-trade |
-| Expanded fixed-bps XLK-only timing controls | train `-2572.04` bps, validation `-45.13` bps | test `-977.24` bps | Old fixed-bps candidate shape does not transfer |
+| Finaldata fixed-bps XLK-only timing controls | train `-2572.04` bps, validation `-45.13` bps | test `-977.24` bps | Old fixed-bps candidate shape does not transfer |
 | Current top-5 timing robustness re-audit | no train/validation stability rule passes | `0.00` bps selected policy | No active timing rule selected |
 | Named timing candidate `micro_shrink_0.75_cw10d_e60_x0_mh240` | train `-2695.47` bps | test `-894.79` bps | Earlier positive result does not survive finaldata/current basket |
 | Regime-shift audit | corr `0.613` train vs `0.634` test; beta `0.531` vs `0.617` | April short gross about `-851` bps before costs | Linkage does not collapse; April is a directional/signal-regime failure |
@@ -177,7 +186,7 @@ The monetization optimizer makes this sharper.  It takes the liquid validation-p
 The top-20 method diagnostics absorb the methodology addendum conservatively:
 there is no synthetic fallback, Kalman beta is lagged, passive entries include
 adverse selection, and each trial is registered.  The combined filters reduce
-some losses, but they do not create a tradable pair alpha in the expanded sample.
+some losses, but they do not create a tradable pair alpha in the finaldata sample.
 The no-trade gate rejects all selected pair rules.
 
 The execution upgrade replaces fixed cost multipliers with observed bid/ask,
@@ -187,11 +196,11 @@ a validation candidate, but it loses out of sample, so the execution-layer polic
 also remains no-trade for market-neutral pair trading.
 
 Legacy `profit_search_*` outputs identify a useful fixed-bps sparse5 timing
-candidate shape, but those files predate the expanded top-20 pipeline.  They are
-not final finaldata evidence until regenerated and passed through sign-flip,
+candidate shape, but those files predate the finaldata top-20 pipeline.  They are
+not final evidence until regenerated and passed through sign-flip,
 always-long/short, circular-shift, latency, and cost-stress controls.
 
-The regenerated expanded-sample fixed-bps timing controls reject that candidate
+The regenerated finaldata fixed-bps timing controls reject that candidate
 shape: the current top-5 holdings basket loses in train, validation, and test;
 the sign-flip and always-long controls are better on the test period.  Therefore
 the current final policy remains no-trade for both strict arbitrage and the
@@ -206,13 +215,12 @@ volatility are hostile, but no tested horizon passes the validation gate.
 The timing robustness script now resolves the earlier positive-candidate
 conflict: the previously highlighted `micro_shrink_0.75_cw10d_e60_x0_mh240`
 shape is explicitly re-audited on the current top-5 clean holdings basket and
-the full March-April holdout.  It loses on train and test, including exact
+the metadata test holdout.  It loses on train and test, including exact
 bid/ask latency variants, so it is not a final active claim.
 
 The regime-shift diagnostics explain why that failure is not simply a cost
-artifact.  The XLK/top-holdings linkage is only modestly weaker out of sample:
-one-minute correlation moves from about `0.655` to `0.634`, while beta is almost
-unchanged.  The larger issue is directional instability.  In April, XLK rallies
+artifact.  The XLK/top-holdings linkage does not collapse out of sample:
+one-minute correlation averages about `0.613` in train and `0.634` in test, while beta moves from about `0.531` to `0.617`.  The larger issue is directional instability.  In April, XLK rallies
 about `1263` bps, the basket rallies about `1321` bps, the premium remains
 persistently positive, and the contrarian timing rule is short XLK for most of
 the month.  The April short-side gross loss is about `-851` bps before costs,
