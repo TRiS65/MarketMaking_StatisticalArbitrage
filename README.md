@@ -160,6 +160,17 @@ Use this wording unless a future finaldata run clearly overturns it:
 
 This is not primarily a laptop-compute failure.  A MacBook limits how far the project can go toward event-level queue simulation, partial-fill modeling, and multi-leg synchronized execution, but the current no-trade result is driven by strategy evidence: several finaldata candidates lose on gross P&L before costs in the holdout.  For example, the re-audited `micro_shrink_0.75_cw10d_e60_x0_mh240` timing rule has test gross `-567.59` bps, cost `327.20` bps, and net `-894.79` bps; April alone has gross `-724.16` bps and net `-862.35` bps.  More detailed execution cannot rescue a rule whose out-of-sample direction is wrong before costs.
 
+Final verdict by strategy family:
+
+| Strategy family | Final status | Why |
+|---|---|---|
+| Market-neutral XLK-vs-basket arbitrage | Rejected / no-trade | Multi-leg execution costs and slow residual reversion dominate; bid/ask boundary audit is not robust |
+| XLK-vs-single-stock pair trading | Diagnostic only | Some no-cost and low-cost pair rows are positive, but validation-selected active pair methods fail final no-trade gates |
+| Fixed-bps / microprice XLK-only timing | Rejected on finaldata | Earlier positive candidate does not transfer; current target rule is gross-negative in the metadata test window |
+| Regime gate / supervised classifier | Diagnostic only | Helps explain April failure but does not survive test, 2x cost, or latency stress |
+| Markowitz / Almgren-Chriss monetization optimizer | Rejected / no-trade | Finds validation-positive liquid signals but loses `-712.26` bps in the untouched test window |
+| Remaining research opportunity | Future work, not final claim | Only narrow gross-positive candidates should receive event-level execution audit; alternative ETF-ETF or lower-turnover designs are separate projects |
+
 ## Final-Data Quick Results Snapshot
 
 The 12-month finaldata run gives a more conservative conclusion than the old shorter samples:
@@ -186,6 +197,8 @@ The professor robustness table does find pair/spread definitions where no-cost a
 The monetization optimizer makes this sharper.  It takes the liquid validation-positive pair signals, allocates across them with a long-only Markowitz/QP-style portfolio, and adds Almgren-Chriss-inspired participation impact and timing-risk buffers.  The best train/validation-selected portfolio is strongly positive in-sample (`+743.62` train, `+526.14` validation), but loses `-712.26` bps in the untouched test window and `-625.26` bps under the clipped last-trade proxy.  That is direct evidence that the bottleneck is monetization: prediction exists in pockets, but the edge is too unstable and slow to convert into robust net P&L.
 
 The practical implication is to stop broad parameter fishing.  Any further profitability rescue should be deliberately narrow: audit only gross-positive, low-cost candidates such as the AMD/AAPL-style pair rows that remain positive under conservative cost screens; separate signal baskets from tradable hedge baskets; and test any long-only or no-short-into-uptrend timing rule through the same metadata split before treating it as evidence.  The current final policy remains no-trade.
+
+So the final answer is not that the research direction is impossible, nor that the machine is too weak.  It is that the tested 12-month XLK strategy families do not provide honest tradable alpha under the implemented evidence standard.  The remaining possible routes are new research questions: event-level audit of a few gross-positive pairs, cost-aware tradable basket construction, ETF-ETF relative value, or lower-turnover horizons.
 
 The top-20 method diagnostics absorb the methodology addendum conservatively:
 there is no synthetic fallback, Kalman beta is lagged, passive entries include

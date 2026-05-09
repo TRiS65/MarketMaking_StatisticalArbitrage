@@ -140,6 +140,17 @@ The final report separates four categories so old positive screens are not confu
 
 This is not primarily a laptop-compute failure.  A MacBook limits how far the project can go toward event-level queue simulation, partial-fill modeling, and multi-leg synchronized execution, but the current no-trade result is driven by strategy evidence: several finaldata candidates lose on gross P&L before costs in the holdout.  For example, the re-audited `micro_shrink_0.75_cw10d_e60_x0_mh240` timing rule has test gross `-567.59` bps, cost `327.20` bps, and net `-894.79` bps; April alone has gross `-724.16` bps and net `-862.35` bps.  More detailed execution cannot rescue a rule whose out-of-sample direction is wrong before costs.
 
+Final verdict by strategy family:
+
+| Strategy family | Final status | Why |
+|---|---|---|
+| Market-neutral XLK-vs-basket arbitrage | Rejected / no-trade | Multi-leg execution costs and slow residual reversion dominate; bid/ask boundary audit is not robust |
+| XLK-vs-single-stock pair trading | Diagnostic only | Some no-cost and low-cost pair rows are positive, but validation-selected active pair methods fail final no-trade gates |
+| Fixed-bps / microprice XLK-only timing | Rejected on finaldata | Earlier positive candidate does not transfer; current target rule is gross-negative in the metadata test window |
+| Regime gate / supervised classifier | Diagnostic only | Helps explain April failure but does not survive test, 2x cost, or latency stress |
+| Markowitz / Almgren-Chriss monetization optimizer | Rejected / no-trade | Finds validation-positive liquid signals but loses `-712.26` bps in the untouched test window |
+| Remaining research opportunity | Future work, not final claim | Only narrow gross-positive candidates should receive event-level execution audit; alternative ETF-ETF or lower-turnover designs are separate projects |
+
 ## Top Holdings Used
 
 {md_table(holdings, ['symbol', 'name', 'official_weight_pct', 'basket_weight', 'used_in_clean_panel'], 25)}
@@ -170,6 +181,8 @@ OU and stationarity diagnostics:
 The monetization layer treats liquid validation-positive pair signals as strategy return streams.  It allocates across them with a long-only Markowitz/QP-style optimizer and then applies an Almgren-Chriss-inspired execution stress: quoted-spread fraction, square-root participation impact, and execution-horizon timing-risk buffer.  Selection uses train/validation only; test is the holdout.
 
 The interpretation is deliberately conservative: the optimizer can find prediction in pockets, but it does not monetize out of sample.  That means the bottleneck is not only transaction-cost accounting; it is also gross-signal instability and slow reversion across regimes.
+
+So the final answer is not that the research direction is impossible, nor that the machine is too weak.  It is that the tested 12-month XLK strategy families do not provide honest tradable alpha under the implemented evidence standard.  The remaining possible routes are new research questions: event-level audit of a few gross-positive pairs, cost-aware tradable basket construction, ETF-ETF relative value, or lower-turnover horizons.
 
 Selection:
 
