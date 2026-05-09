@@ -138,6 +138,8 @@ The final report separates four categories so old positive screens are not confu
 
 {md_table(loss_decision, ['research_path', 'evidence_tier', 'policy_role', 'decision', 'selected_trading_policy', 'train_or_validation_net_bps', 'test_net_bps'], 12)}
 
+This is not primarily a laptop-compute failure.  A MacBook limits how far the project can go toward event-level queue simulation, partial-fill modeling, and multi-leg synchronized execution, but the current no-trade result is driven by strategy evidence: several finaldata candidates lose on gross P&L before costs in the holdout.  For example, the re-audited `micro_shrink_0.75_cw10d_e60_x0_mh240` timing rule has test gross `-567.59` bps, cost `327.20` bps, and net `-894.79` bps; April alone has gross `-724.16` bps and net `-862.35` bps.  More detailed execution cannot rescue a rule whose out-of-sample direction is wrong before costs.
+
 ## Top Holdings Used
 
 {md_table(holdings, ['symbol', 'name', 'official_weight_pct', 'basket_weight', 'used_in_clean_panel'], 25)}
@@ -166,6 +168,8 @@ OU and stationarity diagnostics:
 ## Monetization Optimizer
 
 The monetization layer treats liquid validation-positive pair signals as strategy return streams.  It allocates across them with a long-only Markowitz/QP-style optimizer and then applies an Almgren-Chriss-inspired execution stress: quoted-spread fraction, square-root participation impact, and execution-horizon timing-risk buffer.  Selection uses train/validation only; test is the holdout.
+
+The interpretation is deliberately conservative: the optimizer can find prediction in pockets, but it does not monetize out of sample.  That means the bottleneck is not only transaction-cost accounting; it is also gross-signal instability and slow reversion across regimes.
 
 Selection:
 
@@ -353,14 +357,12 @@ The next report should avoid saying "ETF arbitrage is profitable" unless a marke
 
 ## Next Steps
 
-1. Run the full grid overnight; the committed top-20 diagnostic grid is intentionally laptop-safe.
-2. Improve passive execution with queue-depth and partial-fill modeling; the current passive mode is only a stress case.
-3. Extend signal bucket tests into formal timing selection only if the decile relation is stable across train/validation/test.
-4. Add portfolio-level drawdown / VaR constraints for correlated constituent losses.
-5. Add a formal DSR / multiple-testing section using the trial registry as the denominator.
-6. Treat legacy profit-search outputs as candidate shapes only; final evidence must come from the current finaldata pipeline and metadata split.
-7. If pursuing a positive extension, move from linear microstructure timing to conditional gates: avoid high spread / high volatility states, trade only where order-flow and basket-premium signs agree, and validate on event-level fills.
-8. Add a trend/regime gate before any contrarian XLK-only timing claim.  The April audit shows that persistent positive premium during an aligned XLK/basket rally can make the strategy short the ETF into a strong uptrend; this should trigger no-trade or one-sided trading restrictions.
+1. Stop broad parameter fishing; the finaldata evidence already supports no-trade for the tested families.
+2. If doing one last profitability rescue, restrict it to gross-positive, low-cost candidates that survive no-cost, 0.25-spread, and 0.50-spread screens, then run exact bid/ask, latency, monthly attribution, top-trade concentration, and sign-flip controls.
+3. Separate signal baskets from tradable hedge baskets: wide-spread names may help fair-value estimation, but should not automatically become hedge legs.
+4. If testing XLK-only timing again, predefine a long-only or no-short-into-uptrend regime rule and evaluate it walk-forward through the metadata split.
+5. Improve passive execution with queue-depth and partial-fill modeling only for candidates whose gross OOS signal remains positive; execution detail cannot rescue gross-negative rules.
+6. Add a formal DSR / multiple-testing section using the trial registry as the denominator.
 
 ## Reproducibility
 

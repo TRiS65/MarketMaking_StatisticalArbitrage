@@ -158,6 +158,8 @@ Use this wording unless a future finaldata run clearly overturns it:
 
 > Final 12-month evidence shows pockets of gross and low-cost relative-value signal, but no active market-neutral, XLK-only timing, regime-classifier, or Markowitz/AC monetization rule survives the holdout and execution gates. The selected trading policy is no-trade. The research conclusion is not “no signal”; it is “signal exists in pockets, but monetization fails under realistic costs, slow reversion, and regime instability.”
 
+This is not primarily a laptop-compute failure.  A MacBook limits how far the project can go toward event-level queue simulation, partial-fill modeling, and multi-leg synchronized execution, but the current no-trade result is driven by strategy evidence: several finaldata candidates lose on gross P&L before costs in the holdout.  For example, the re-audited `micro_shrink_0.75_cw10d_e60_x0_mh240` timing rule has test gross `-567.59` bps, cost `327.20` bps, and net `-894.79` bps; April alone has gross `-724.16` bps and net `-862.35` bps.  More detailed execution cannot rescue a rule whose out-of-sample direction is wrong before costs.
+
 ## Final-Data Quick Results Snapshot
 
 The 12-month finaldata run gives a more conservative conclusion than the old shorter samples:
@@ -182,6 +184,8 @@ The 12-month finaldata run gives a more conservative conclusion than the old sho
 The professor robustness table does find pair/spread definitions where no-cost and 0.25-spread results are strongly positive, while 0.50-spread taker costs often erase the edge. That is the main empirical evidence that execution quality is now the central research question.
 
 The monetization optimizer makes this sharper.  It takes the liquid validation-positive pair signals, allocates across them with a long-only Markowitz/QP-style portfolio, and adds Almgren-Chriss-inspired participation impact and timing-risk buffers.  The best train/validation-selected portfolio is strongly positive in-sample (`+743.62` train, `+526.14` validation), but loses `-712.26` bps in the untouched test window and `-625.26` bps under the clipped last-trade proxy.  That is direct evidence that the bottleneck is monetization: prediction exists in pockets, but the edge is too unstable and slow to convert into robust net P&L.
+
+The practical implication is to stop broad parameter fishing.  Any further profitability rescue should be deliberately narrow: audit only gross-positive, low-cost candidates such as the AMD/AAPL-style pair rows that remain positive under conservative cost screens; separate signal baskets from tradable hedge baskets; and test any long-only or no-short-into-uptrend timing rule through the same metadata split before treating it as evidence.  The current final policy remains no-trade.
 
 The top-20 method diagnostics absorb the methodology addendum conservatively:
 there is no synthetic fallback, Kalman beta is lagged, passive entries include
